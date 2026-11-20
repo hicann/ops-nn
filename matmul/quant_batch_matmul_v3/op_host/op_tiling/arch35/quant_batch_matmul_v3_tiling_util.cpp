@@ -70,14 +70,7 @@ bool IsMxCubeBound(const QuantBatchMatmulInfo& inputParams)
     const uint64_t m = inputParams.mSize;
     const uint64_t n = inputParams.nSize;
     const uint64_t k = inputParams.kSize;
-    bool isMxfp4Input = inputParams.isMxPerGroup && inputParams.aDtype == ge::DT_FLOAT4_E2M1 &&
-                        inputParams.bDtype == ge::DT_FLOAT4_E2M1;
-    bool isMxfp8Input = inputParams.isMxPerGroup &&
-                        (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
-                        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
-    if (!isMxfp4Input && !isMxfp8Input) {
-        return false;
-    }
+    const bool isMxfp4Input = inputParams.aDtype == ge::DT_FLOAT4_E2M1;
     const double cubeThroughput = isMxfp4Input ? MXFP4_CUBE_THROUGHPUT : MXFP8_CUBE_THROUGHPUT;
     const uint64_t aInputCost = m * k;
     const uint64_t bInputCost = n * k;
@@ -164,21 +157,27 @@ void FillSocSpecifyParamsFromPlatform(fe::PlatFormInfos* platformInfo, SocSpecif
     outInfo.l2Bw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(l2Rate) / LB_KB_SIZE;
 }
 
-bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams)
+MxL0CPingpongEligibility GetMxL0CPingpongEligibility(const QuantBatchMatmulInfo& inputParams, NpuArch npuArch,
+                                                     bool tensorApiEnabled)
 {
-    bool isMxfp4Input = inputParams.aDtype == ge::DT_FLOAT4_E2M1 && inputParams.bDtype == ge::DT_FLOAT4_E2M1;
-    bool isMxfp8Input = (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
-                        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
-    bool isMxDataInput = isMxfp4Input || isMxfp8Input;
-    bool isSupportedOutputDtype = inputParams.cDtype == ge::DT_FLOAT16 || inputParams.cDtype == ge::DT_BF16;
-    uint64_t aInnerAxis = inputParams.transA ? inputParams.mSize : inputParams.kSize;
-    uint64_t bInnerAxis = inputParams.transB ? inputParams.kSize : inputParams.nSize;
-    uint64_t innerAxisAlignSize = isMxfp4Input ? MXFP4_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE :
-                                                 MXFP8_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE;
-    bool isInnerAxisAligned = GetSizeWithDataType(aInnerAxis, inputParams.aDtype) % innerAxisAlignSize == 0UL &&
-                              GetSizeWithDataType(bInnerAxis, inputParams.bDtype) % innerAxisAlignSize == 0UL;
-    return inputParams.isMxPerGroup && inputParams.scaleDtype == ge::DT_FLOAT8_E8M0 && IsTensorapiCapable() &&
-           isMxDataInput && isSupportedOutputDtype && isInnerAxisAligned && IsMxCubeBound(inputParams);
+    if (npuArch != Ops::Base::DAV_3510 || !tensorApiEnabled || !IsMxBasicApiCapable(inputParams)) {
+        return {};
+    }
+
+    // The legacy tail path has additional gates and also controls the original scale window adjustment.
+    if (inputParams.scaleDtype != ge::DT_FLOAT8_E8M0 ||
+        (inputParams.cDtype != ge::DT_FLOAT16 && inputParams.cDtype != ge::DT_BF16)) {
+        return {true, false};
+    }
+    const uint64_t aInnerAxis = inputParams.transA ? inputParams.mSize : inputParams.kSize;
+    const uint64_t bInnerAxis = inputParams.transB ? inputParams.kSize : inputParams.nSize;
+    const uint64_t innerAxisAlignSize = inputParams.aDtype == ge::DT_FLOAT4_E2M1 ?
+                                            MXFP4_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE :
+                                            MXFP8_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE;
+    const bool legacyTail = GetSizeWithDataType(aInnerAxis, inputParams.aDtype) % innerAxisAlignSize == 0UL &&
+                            GetSizeWithDataType(bInnerAxis, inputParams.bDtype) % innerAxisAlignSize == 0UL &&
+                            IsMxCubeBound(inputParams);
+    return {true, legacyTail};
 }
 
 void QuantBatchMatMulV3TilingUtil::SetBasicTilingData(const QuantBatchMatmulInfo& inputParams,

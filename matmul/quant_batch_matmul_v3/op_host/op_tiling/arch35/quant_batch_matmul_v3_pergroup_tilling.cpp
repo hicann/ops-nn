@@ -517,8 +517,9 @@ void X2PerGroupTiling::SelectKernelType()
 {
     const auto& mm = tilingData_.matmulTiling;
     SelectReuseMode(static_cast<uint64_t>(mm.kAL1), static_cast<uint64_t>(mm.kBL1));
-    // The kernel selects broadcast caching; no private flag is serialized.
-    tilingData_.adaptiveSlidingWin.reserved = 0U;
+    // This per-group path does not use the native MX L0 tile plan.
+    tilingData_.adaptiveSlidingWin.mL0 = 0U;
+    tilingData_.adaptiveSlidingWin.nL0 = 0U;
 }
 
 // ===================== 6. Workspace =====================

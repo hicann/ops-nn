@@ -259,10 +259,12 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
         x2ScaleShape.MutableOriginShape() = gert::Shape({1});
         x2ScaleShape.MutableStorageShape() = gert::Shape({1});
     } else {
-        x1ScaleShape.MutableOriginShape() = gert::Shape({k1, param.m, 2});
-        x1ScaleShape.MutableStorageShape() = gert::Shape({k1, param.m, 2});
-        x2ScaleShape.MutableOriginShape() = gert::Shape({k1, param.n, 2});
-        x2ScaleShape.MutableStorageShape() = gert::Shape({k1, param.n, 2});
+        x1ScaleShape.MutableStorageShape() = param.transA ? gert::Shape({k1, param.m, 2}) :
+                                                            gert::Shape({param.m, k1, 2});
+        x2ScaleShape.MutableStorageShape() = param.transB ? gert::Shape({param.n, k1, 2}) :
+                                                            gert::Shape({k1, param.n, 2});
+        x1ScaleShape.MutableOriginShape() = x1ScaleShape.MutableStorageShape();
+        x2ScaleShape.MutableOriginShape() = x2ScaleShape.MutableStorageShape();
     }
 
     map<string, string> socInfos;
@@ -349,6 +351,8 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
         ASSERT_EQ(tilingData->n, static_cast<uint32_t>(param.n));
         ASSERT_EQ(tilingData->k, static_cast<uint32_t>(param.k));
         EXPECT_EQ(tilingData->windowLen, 4U);
+        EXPECT_GT(tilingData->baseK, 0U);
+        EXPECT_LT(tilingData->baseK, 4096U);
     }
 }
 

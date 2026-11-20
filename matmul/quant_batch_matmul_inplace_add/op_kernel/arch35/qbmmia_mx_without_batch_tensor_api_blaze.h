@@ -17,11 +17,12 @@
 #include "blaze/gemm/block/block_scheduler_qbmm.h"
 #include "blaze/epilogue/block/block_epilogue_empty.h"
 #include "blaze/gemm/block/block_mmad_qbmm_mx.h"
+#include "blaze/gemm/block/block_mmad_qbmm_mx_l0c_pingpong.h"
 #include "blaze/gemm/kernel/kernel_qbmm_mx_without_batch.h"
 
 using namespace Blaze::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout,
-          uint64_t FULL_LOAD_MODE = 0>
+          uint64_t FULL_LOAD_MODE = 0, bool USE_PINGPONG = false>
 __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale,
                                                            GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
 {
@@ -35,7 +36,9 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
     using BlockScheduler = Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout,
                                                                    AType>;
 
-    using DispatchPolicy = MatmulWithScaleMx<FULL_LOAD_MODE, true, KernelMmadWithScaleMxWithoutBatch>;
+    using DispatchPolicy = AscendC::Std::conditional_t<
+        USE_PINGPONG, MatmulWithScaleMxL0CPingpong<FULL_LOAD_MODE, true, KernelMmadWithScaleMxWithoutBatch>,
+        MatmulWithScaleMx<FULL_LOAD_MODE, true, KernelMmadWithScaleMxWithoutBatch>>;
     using BlockMmad = Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType,
                                        cLayout>;
 
@@ -44,12 +47,30 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
     const QMMIA::QbmmiaWithoutBatchTilingData&
         qbmmiaTilingData = *static_cast<const QMMIA::QbmmiaWithoutBatchTilingData*>(tilingData);
 
-    MatmulKernel{}(Params{{qbmmiaTilingData.m, qbmmiaTilingData.n, qbmmiaTilingData.k, 1L},
-                          {aGM, bGM, cGM, nullptr, perTokenScale, scale},
-                          {qbmmiaTilingData.kBL1, qbmmiaTilingData.scaleKL1, qbmmiaTilingData.nBufferNum},
-                          {qbmmiaTilingData.baseM, qbmmiaTilingData.baseN, qbmmiaTilingData.mTailTile,
-                           qbmmiaTilingData.nTailTile, qbmmiaTilingData.mBaseTailSplitCnt,
-                           qbmmiaTilingData.nBaseTailSplitCnt, qbmmiaTilingData.mTailMain, qbmmiaTilingData.nTailMain},
-                          {qbmmiaTilingData.baseM, qbmmiaTilingData.baseN, qbmmiaTilingData.baseK,
-                           qbmmiaTilingData.isBias, qbmmiaTilingData.dbL0C, qbmmiaTilingData.weightMustHitL2}});
+    Params params{};
+    params.problemShape = ProblemShape{qbmmiaTilingData.m, qbmmiaTilingData.n, qbmmiaTilingData.k, 1L};
+    params.l1Params = {qbmmiaTilingData.kBL1, qbmmiaTilingData.scaleKL1, qbmmiaTilingData.nBufferNum};
+    if constexpr (USE_PINGPONG) {
+        auto& blockParams = params.mmadParams;
+        blockParams = {aGM, bGM, cGM, nullptr, perTokenScale, scale, qbmmiaTilingData.mL0, qbmmiaTilingData.nL0};
+        blockParams.problemShape = params.problemShape;
+        blockParams.l1TileShape = {qbmmiaTilingData.baseM, qbmmiaTilingData.baseN, qbmmiaTilingData.kBL1, 0};
+        blockParams.kL0 = qbmmiaTilingData.baseK;
+        blockParams.l1Params = params.l1Params;
+        blockParams.isBias = qbmmiaTilingData.isBias == 1;
+        blockParams.dbL0C = qbmmiaTilingData.dbL0C > 1;
+    } else {
+        params.mmadParams = {aGM, bGM, cGM, nullptr, perTokenScale, scale};
+    }
+    params.schParams = {qbmmiaTilingData.baseM,
+                        qbmmiaTilingData.baseN,
+                        qbmmiaTilingData.mTailTile,
+                        qbmmiaTilingData.nTailTile,
+                        qbmmiaTilingData.mBaseTailSplitCnt,
+                        qbmmiaTilingData.nBaseTailSplitCnt,
+                        qbmmiaTilingData.mTailMain,
+                        qbmmiaTilingData.nTailMain};
+    params.qbmmParams = {qbmmiaTilingData.baseM,  qbmmiaTilingData.baseN, qbmmiaTilingData.baseK,
+                         qbmmiaTilingData.isBias, qbmmiaTilingData.dbL0C, qbmmiaTilingData.weightMustHitL2};
+    MatmulKernel{}(params);
 }

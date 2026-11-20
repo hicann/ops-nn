@@ -49,13 +49,24 @@ private:
         uint32_t l1BufferNum;
     };
 
+    struct MxL0TilePlan {
+        uint32_t mL0 = 0;
+        uint32_t nL0 = 0;
+        uint32_t baseK = 0;
+    };
+
+    MxL0TilePlan SelectMxL0TilePlan(uint64_t baseM, uint64_t baseN, uint64_t kL1, uint64_t l0aBytes, uint64_t l0bBytes,
+                                    uint64_t l0cBytes, bool transA, bool transB) const;
+    bool TryShrinkMxThreeBufferScaleKL1(MxL1EstimateParams& params) const;
+
     void CalculateNBufferNum();
+    bool ApplyMxL0CPingpongPlan();
     uint64_t DeriveScaleKL1(uint32_t& scaleFactorA, uint64_t stepKa, uint32_t& scaleFactorB, uint64_t stepKb,
                             uint64_t baseK) const;
     MxL1EstimateParams BuildL1EstimateParams(uint64_t kL1, uint64_t baseScaleKL1, uint64_t baseM, uint64_t baseN,
                                              bool isAFullLoad) const;
     MxL1Plan SelectMxL1Plan(const MxL1EstimateParams& currentParams, uint64_t baseK, uint64_t baseScaleKL1) const;
-    MxL1Plan MakeMxL1Plan(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
+    bool MakeMxL1Plan(MxL1EstimateParams params, uint32_t l1BufferNum, MxL1Plan& plan) const;
     uint64_t GetHalfKFallbackScaleKL1(uint64_t scaleKL1, uint64_t kL1) const;
     uint64_t GetFullCoverScaleKL1IfPossible(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
     bool CanReduceStepKToTwo(uint64_t stepKTwoKL1) const;
@@ -63,15 +74,15 @@ private:
     uint64_t CalcUsedL1Size(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
     uint64_t CalcMxFullKLoadSize(uint64_t outerSize, ge::DataType dataDtype, ge::DataType scaleDtype) const;
     bool ShouldKeepAFullLoadByRepeatLoadRatio() const;
-    bool IsMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const;
-    double EstimateMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const;
-    double EstimateMacTimeUs() const;
     void UpdateAFullLoadStatus();
     bool CanSelectMultiBufferByL1Plan(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
     bool IsWithoutBatchTilingData() const;
     void SetWithoutBatchTilingData();
     void NormalizeSingleRoundTailSplitBasicBlock();
     void AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step, uint32_t baseK) const;
+
+    MxL0CPingpongEligibility mxL0CPingpongEligibility_{};
+    bool useMxL0CPingpong_ = false;
 
 protected:
     void ResetTilingData() override;

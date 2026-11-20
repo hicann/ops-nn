@@ -56,7 +56,7 @@ using namespace AscendC;
 #if QBMMIA_IS_MX || QBMMIA_IS_HIF4
 #define QBMMIA_MX_WITHOUT_BATCH_DISPATCH(aLayout, bLayout, fullLoadMode)                                           \
     QbmmiaMxWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, asc::te::nd_ext_layout_ptn, \
-                                        fullLoadMode>(x1, x2, x2_scale, x1_scale, y, &tilingData)
+                                        fullLoadMode, usePingpong>(x1, x2, x2_scale, x1_scale, y, &tilingData)
 
 #define QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(fullLoadMode)                                                       \
     do {                                                                                                            \
@@ -91,14 +91,18 @@ __global__ __aicore__ void quant_batch_matmul_inplace_add(GM_ADDR x1, GM_ADDR x2
     AscendC::InitSocState();
     REGISTER_NONE_TILING;
 #if QBMMIA_IS_MX || QBMMIA_IS_HIF8 || QBMMIA_IS_HIF4
-    if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH) {
+    constexpr bool usePingpong = TPL_KERNEL_TYPE == TPL_MX_L0C_PINGPONG ||
+                                 TPL_KERNEL_TYPE == TPL_MX_L0C_PINGPONG_A_FULL_LOAD;
+    if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH ||
+                  TPL_KERNEL_TYPE == TPL_MX_L0C_PINGPONG) {
         GET_TILING_DATA_WITH_STRUCT(QMMIA::QbmmiaWithoutBatchTilingData, tilingData, tiling);
 #if QBMMIA_IS_MX || QBMMIA_IS_HIF4
         QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(0);
 #else
         QBMMIA_CUBE_WITHOUT_BATCH_LAYOUT_DISPATCH(0);
 #endif
-    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH) {
+    } else if constexpr (TPL_KERNEL_TYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH ||
+                         TPL_KERNEL_TYPE == TPL_MX_L0C_PINGPONG_A_FULL_LOAD) {
         GET_TILING_DATA_WITH_STRUCT(QMMIA::QbmmiaWithoutBatchTilingData, tilingData, tiling);
 #if QBMMIA_IS_MX || QBMMIA_IS_HIF4
         QBMMIA_MX_WITHOUT_BATCH_LAYOUT_DISPATCH(Blaze::Gemm::A_FULL_LOAD_MODE);

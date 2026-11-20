@@ -66,6 +66,9 @@ ge::graphStatus QuantBatchMatmulInplaceAddMXBasicAPITiling::DoLibApiTiling()
 
 uint64_t QuantBatchMatmulInplaceAddMXBasicAPITiling::GetKernelType() const
 {
+    if (withoutBatchTilingData_.mL0 != 0) {
+        return isAFullLoad_ ? TPL_MX_L0C_PINGPONG_A_FULL_LOAD : TPL_MX_L0C_PINGPONG;
+    }
     return isAFullLoad_ ? TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH :
                           TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH;
 }

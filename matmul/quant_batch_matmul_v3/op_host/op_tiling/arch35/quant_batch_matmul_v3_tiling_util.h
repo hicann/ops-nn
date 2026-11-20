@@ -274,7 +274,13 @@ inline bool IsHif4BasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 
 constexpr uint64_t GHZ_TO_MHZ = 1000UL;
 
-bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams);
+struct MxL0CPingpongEligibility {
+    bool explicitPlan = false;
+    bool legacyTail = false;
+};
+
+MxL0CPingpongEligibility GetMxL0CPingpongEligibility(const QuantBatchMatmulInfo& inputParams, NpuArch npuArch,
+                                                     bool tensorApiEnabled);
 
 // 从平台信息解析 SoC 规格（带宽/频率/核数）并写入 outInfo；platformInfo 为空或字段缺失时
 // 由 outInfo 保持零值，调用方按需校验。TilingParse 与 InitCompileInfo 用它填充 compileInfo.socSpec，

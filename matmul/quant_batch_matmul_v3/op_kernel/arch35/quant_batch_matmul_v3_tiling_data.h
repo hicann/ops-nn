@@ -94,7 +94,9 @@ struct SlidingWindowParams {
     // (qbmm_asw_block.h / cmct/block_scheduler_qbmm.h).
     // Default 4 is the common-window fallback so hand-built tiling data stays valid.
     uint32_t windowLen = 4;
-    uint32_t reserved = 0;
+    // Use the reserved word so every existing batch tiling field keeps its offset.
+    uint16_t mL0 = 0;
+    uint16_t nL0 = 0;
 };
 #pragma pack(pop)
 
@@ -214,6 +216,9 @@ struct alignas(TILING_DATA_ALIGNMENT) QuantBatchMatmulV3TensorAPIWithoutBatchTil
     uint8_t dbL0C = 0;
     uint8_t weightMustHitL2 = 1U;
     uint32_t windowLen = 4U;
+    // Zero means legacy execution; nonzero M/N use the Host plan with the existing baseK.
+    uint16_t mL0 = 0;
+    uint16_t nL0 = 0;
 };
 #pragma pack(pop)
 } // namespace DequantBmm

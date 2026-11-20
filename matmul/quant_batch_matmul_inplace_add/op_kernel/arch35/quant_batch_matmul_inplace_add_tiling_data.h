@@ -115,6 +115,9 @@ struct alignas(8) QbmmiaWithoutBatchTilingData {
     uint8_t dbL0C = 0;
     uint8_t weightMustHitL2 = 1U;
     uint32_t windowLen = 4U;
+    // Zero means legacy execution; nonzero M/N use the Host plan with the existing baseK.
+    uint16_t mL0 = 0;
+    uint16_t nL0 = 0;
 };
 #pragma pack(pop)
 } // namespace QMMIA

@@ -158,6 +158,8 @@ public:
         inputParams_.isMxPerGroup = true;
         compileInfo_.npuArch = Ops::Base::DAV_3510;
     }
+    using AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType;
+    using AdaptiveSlidingWindowMXBasicAPITiling::tilingData_;
     using AdaptiveSlidingWindowTiling::adaptiveWin_;
     using QuantBatchMatmulV3TilingBase::aicoreParams_;
     using QuantBatchMatmulV3TilingBase::compileInfo_;
@@ -360,16 +362,63 @@ TEST(QuantBatchMatmulMxState, PingpongWritesAdjustedFactorsBackOnlyOnArch35)
     tiling.inputParams_.kSize = 8192;
     uint32_t factorA = 64;
     uint32_t factorB = 32;
-    const bool pingpong = optiling::IsMxL0CPingpong(tiling.inputParams_);
-    EXPECT_EQ(tiling.DeriveScaleKL1(factorA, 1, factorB, 2, 128), pingpong ? 2048U : 8192U);
-    EXPECT_EQ(factorA, pingpong ? 16U : 64U);
-    EXPECT_EQ(factorB, pingpong ? 8U : 32U);
+    tiling.mxL0CPingpongEligibility_ = optiling::GetMxL0CPingpongEligibility(tiling.inputParams_,
+                                                                             tiling.compileInfo_.npuArch, true);
+    ASSERT_TRUE(tiling.mxL0CPingpongEligibility_.legacyTail);
+    EXPECT_EQ(tiling.DeriveScaleKL1(factorA, 1, factorB, 2, 128), 2048U);
+    EXPECT_EQ(factorA, 16U);
+    EXPECT_EQ(factorB, 8U);
     tiling.compileInfo_.npuArch = NpuArch::DAV_9201;
+    tiling.mxL0CPingpongEligibility_ = optiling::GetMxL0CPingpongEligibility(tiling.inputParams_,
+                                                                             tiling.compileInfo_.npuArch, true);
+    EXPECT_FALSE(tiling.mxL0CPingpongEligibility_.explicitPlan);
     factorA = 64;
     factorB = 32;
     EXPECT_EQ(tiling.DeriveScaleKL1(factorA, 1, factorB, 2, 128), 8192U);
     EXPECT_EQ(factorA, 64U);
     EXPECT_EQ(factorB, 32U);
+}
+
+TEST(QuantBatchMatmulMxState, UsesLegacyPingpongOnlyWhenExplicitPlanCannotFit)
+{
+    MxStateProbe tiling;
+    auto& cube = tiling.tilingData_.matmulTiling;
+    cube.baseM = cube.baseN = 128;
+    cube.baseK = 64;
+    cube.kBL1 = 256;
+    cube.dbL0C = 1;
+    tiling.compileInfo_.l0aSize = tiling.compileInfo_.l0bSize = 64 * 1024;
+    tiling.compileInfo_.l0cSize = 256 * 1024;
+    tiling.inputParams_.mSize = tiling.inputParams_.nSize = 4096;
+    tiling.inputParams_.kSize = 8192;
+    tiling.inputParams_.cDtype = ge::DT_FLOAT;
+    tiling.mxL0CPingpongEligibility_ = optiling::GetMxL0CPingpongEligibility(tiling.inputParams_,
+                                                                             tiling.compileInfo_.npuArch, true);
+    ASSERT_TRUE(tiling.mxL0CPingpongEligibility_.explicitPlan);
+    ASSERT_FALSE(tiling.mxL0CPingpongEligibility_.legacyTail);
+    const auto pingpong = static_cast<uint64_t>(optiling::QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG);
+    const auto basic = static_cast<uint64_t>(optiling::QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI);
+    tiling.ApplyMxL0CPingpongPlan();
+    EXPECT_EQ(tiling.GetKernelType(), pingpong);
+    EXPECT_EQ(tiling.tilingData_.adaptiveSlidingWin.mL0, 128U);
+
+    // A K-L1 window that cannot produce an explicit plan retains the old route only for legacy-eligible inputs.
+    cube.kBL1 = 65;
+    tiling.ApplyMxL0CPingpongPlan();
+    EXPECT_EQ(tiling.GetKernelType(), basic);
+    EXPECT_EQ(tiling.tilingData_.adaptiveSlidingWin.mL0, 0U);
+    tiling.inputParams_.cDtype = ge::DT_BF16;
+    tiling.mxL0CPingpongEligibility_ = optiling::GetMxL0CPingpongEligibility(tiling.inputParams_,
+                                                                             tiling.compileInfo_.npuArch, true);
+    ASSERT_TRUE(tiling.mxL0CPingpongEligibility_.legacyTail);
+    tiling.ApplyMxL0CPingpongPlan();
+    EXPECT_EQ(tiling.GetKernelType(), pingpong);
+    EXPECT_EQ(tiling.tilingData_.adaptiveSlidingWin.mL0, 0U);
+
+    tiling.mxL0CPingpongEligibility_ = optiling::GetMxL0CPingpongEligibility(tiling.inputParams_,
+                                                                             tiling.compileInfo_.npuArch, false);
+    tiling.ApplyMxL0CPingpongPlan();
+    EXPECT_EQ(tiling.GetKernelType(), basic);
 }
 
 TEST(QuantBatchMatmulMxState, RepeatLoadRatioAccountsForBothOperandWindows)
@@ -400,14 +449,15 @@ TEST(QuantBatchMatmulMxState, L1PlanWidensScaleOnlyWhenDataAndScaleBuffersFit)
     EXPECT_FALSE(tiling.CanFitL1BufferNum(params, 4));
     tiling.aicoreParams_.l1Size = usedBytes;
     EXPECT_TRUE(tiling.CanFitL1BufferNum(params, 4));
-    auto plan = tiling.MakeMxL1Plan(params, 4);
+    MxStateProbe::MxL1Plan plan{};
+    ASSERT_TRUE(tiling.MakeMxL1Plan(params, 4, plan));
     EXPECT_EQ(plan.kL1, 256U);
     EXPECT_EQ(plan.scaleKL1, 512U);
     tiling.aicoreParams_.l1Size = 4 * (64 + 128) * 256 + 2 * (64 + 128) * 128;
-    plan = tiling.MakeMxL1Plan(params, 4);
+    ASSERT_TRUE(tiling.MakeMxL1Plan(params, 4, plan));
     EXPECT_EQ(plan.scaleKL1, 4096U);
     EXPECT_EQ(plan.l1BufferNum, 4U);
-    plan = tiling.MakeMxL1Plan(params, 2);
+    ASSERT_TRUE(tiling.MakeMxL1Plan(params, 2, plan));
     EXPECT_EQ(plan.scaleKL1, 512U);
     EXPECT_EQ(plan.l1BufferNum, 2U);
 }
@@ -583,4 +633,261 @@ TEST(QbmmMixNdCapability, OnlyNewMixRoutesUseCommonBaseBlockForLongK)
             EXPECT_EQ(tiling.adaptiveWin_.useTailWinLogic, expected.useTailWinLogic);
         }
     }
+}
+
+namespace {
+class MxTiling : public optiling::AdaptiveSlidingWindowMXBasicAPITiling {
+public:
+    explicit MxTiling(ge::DataType dtype = ge::DT_FLOAT8_E4M3FN) : AdaptiveSlidingWindowMXBasicAPITiling(nullptr)
+    {
+        inputParams_.Reset();
+        inputParams_.aDtype = inputParams_.bDtype = dtype;
+    }
+};
+constexpr uint64_t L0_AB_BYTES = 65536;
+constexpr uint64_t L0_C_BYTES = 262144;
+} // namespace
+
+TEST(MxL0TilePlan, SelectsMOrNAndPreservesFallback)
+{
+    MxTiling tiling;
+    const auto choose = [&tiling](uint64_t m, uint64_t n, uint64_t k) {
+        return tiling.SelectMxL0TilePlan(m, n, k, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, true);
+    };
+    auto plan = choose(128, 128, 256);
+    EXPECT_EQ(plan.mL0, 128U);
+    EXPECT_EQ(plan.nL0, 128U);
+    EXPECT_EQ(plan.baseK, 128U);
+    plan = choose(256, 256, 256);
+    EXPECT_EQ(plan.mL0, 256U);
+    EXPECT_EQ(plan.nL0, 128U);
+    EXPECT_EQ(plan.baseK, 128U);
+    plan = choose(256, 144, 256);
+    EXPECT_EQ(plan.mL0, 128U);
+    EXPECT_EQ(plan.nL0, 144U);
+    EXPECT_EQ(plan.baseK, 128U);
+    EXPECT_EQ(choose(256, 256, 64).baseK, 64U);
+    EXPECT_EQ(choose(0, 128, 256).mL0, 0U);
+    EXPECT_EQ(choose(512, 512, 256).mL0, 0U);
+    EXPECT_EQ(choose(256, 256, 63).mL0, 0U);
+    EXPECT_EQ(tiling.SelectMxL0TilePlan(256, 256, 256, 1024, 1024, L0_C_BYTES, false, true).mL0, 0U);
+}
+
+TEST(MxL0TilePlan, UsesFp4CapacityAndTransposeAlignment)
+{
+    MxTiling fp8;
+    const auto fp8Plan = fp8.SelectMxL0TilePlan(256, 256, 512, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, true);
+    EXPECT_EQ(fp8Plan.baseK, 128U);
+    EXPECT_NE(fp8.SelectMxL0TilePlan(32, 128, 256, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, true, true).mL0, 0U);
+    EXPECT_NE(fp8.SelectMxL0TilePlan(128, 32, 256, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, false).mL0, 0U);
+    MxTiling fp4(ge::DT_FLOAT4_E2M1);
+    const auto fp4Plan = fp4.SelectMxL0TilePlan(256, 256, 512, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, true);
+    EXPECT_EQ(fp4Plan.baseK, 256U);
+    EXPECT_EQ(fp4Plan.mL0, 256U);
+    EXPECT_EQ(fp4Plan.nL0, 128U);
+    const auto splitM = fp4.SelectMxL0TilePlan(256, 144, 512, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, true);
+    EXPECT_EQ(splitM.mL0, 128U);
+    EXPECT_EQ(splitM.nL0, 144U);
+    EXPECT_EQ(fp4.SelectMxL0TilePlan(32, 128, 256, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, true, true).mL0, 0U);
+    EXPECT_EQ(fp4.SelectMxL0TilePlan(128, 32, 256, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false, false).mL0, 0U);
+}
+
+TEST(MxL0TilePlan, BoundsComputeKBeforeAlignmentAndDivisibility)
+{
+    // The 10/20/66352 regression uses a 16x16 tile and kL1=8192. FP4 capacity permits
+    // K=4096, but MMAD cannot encode it. Legal values above 2048 must remain available.
+    const std::pair<uint64_t, uint32_t> cases[] = {
+        {4096, 2048}, {8064, 4032}, {8192, 2048}, {8256, 2752}, {16384, 2048}};
+    MxTiling tiling(ge::DT_FLOAT4_E2M1);
+    for (const auto& test : cases) {
+        SCOPED_TRACE(::testing::Message() << "kL1=" << test.first);
+        const auto plan = tiling.SelectMxL0TilePlan(16, 16, test.first, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, false,
+                                                    true);
+        ASSERT_EQ(plan.mL0, 16U);
+        ASSERT_EQ(plan.nL0, 16U);
+        ASSERT_EQ(plan.baseK, test.second);
+        EXPECT_LT(plan.baseK, 4096U);
+        EXPECT_EQ(plan.baseK % 64U, 0U);
+        EXPECT_EQ(test.first % plan.baseK, 0U);
+    }
+}
+
+TEST(MxL0TilePlan, BoundsComputeMAndNIndependentlyOfCapacity)
+{
+    // Deliberately enlarge capacity so it cannot hide an MMAD dimension overflow.
+    constexpr uint64_t LARGE_L0_BYTES = 16UL * 1024UL * 1024UL;
+    MxTiling tiling;
+    const auto choose = [&tiling](uint64_t m, uint64_t n) {
+        return tiling.SelectMxL0TilePlan(m, n, 128, LARGE_L0_BYTES, LARGE_L0_BYTES, LARGE_L0_BYTES, false, true);
+    };
+    EXPECT_EQ(choose(4080, 16).mL0, 4080U);
+    EXPECT_EQ(choose(16, 4080).nL0, 4080U);
+    // The L1 dimension may exceed the instruction range if a legal compute split exists.
+    EXPECT_EQ(choose(4096, 16).mL0, 2048U);
+    EXPECT_EQ(choose(16, 4096).nL0, 2048U);
+    EXPECT_EQ(choose(8192, 16).mL0, 0U);
+    EXPECT_EQ(choose(16, 8192).nL0, 0U);
+}
+
+TEST(QuantBatchMatmulMxState, ChecksBiasTableUsingL1StrideBeforeSelectingL0Plan)
+{
+    for (auto dtype : {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E4M3FN}) {
+        for (bool explicitPlan : {false, true}) {
+            for (uint8_t dbL0C : {1U, 2U}) {
+                for (uint32_t baseN : {512U, 528U, 1024U}) {
+                    MxStateProbe tiling;
+                    tiling.inputParams_.aDtype = tiling.inputParams_.bDtype = dtype;
+                    tiling.inputParams_.transA = false;
+                    tiling.inputParams_.transB = true;
+                    tiling.inputParams_.hasBias = true;
+                    tiling.inputParams_.biasDtype = ge::DT_FLOAT;
+                    tiling.compileInfo_.l0aSize = tiling.compileInfo_.l0bSize = L0_AB_BYTES;
+                    tiling.compileInfo_.l0cSize = L0_C_BYTES;
+                    tiling.mxL0CPingpongEligibility_ = {explicitPlan, !explicitPlan};
+                    auto& cube = tiling.tilingData_.matmulTiling;
+                    cube.baseM = 16;
+                    cube.baseN = baseN;
+                    cube.baseK = 64;
+                    cube.kAL1 = cube.kBL1 = 128;
+                    cube.dbL0C = dbL0C;
+                    SCOPED_TRACE(::testing::Message() << "dtype=" << dtype << ", baseN=" << baseN
+                                                      << ", explicit=" << explicitPlan << ", dbL0C=" << +dbL0C);
+                    EXPECT_EQ(tiling.ApplyMxL0CPingpongPlan(), baseN == 512U);
+                    if (baseN > 512U) {
+                        EXPECT_EQ(cube.dbL0C, dbL0C);
+                        EXPECT_EQ(tiling.tilingData_.adaptiveSlidingWin.mL0, 0U);
+                    }
+                    // No-bias callers, including InplaceAdd, do not consume BT.
+                    tiling.inputParams_.hasBias = false;
+                    EXPECT_TRUE(tiling.ApplyMxL0CPingpongPlan());
+                    // Paths outside MX ping-pong eligibility retain their existing validation.
+                    tiling.inputParams_.hasBias = true;
+                    tiling.mxL0CPingpongEligibility_ = {};
+                    EXPECT_TRUE(tiling.ApplyMxL0CPingpongPlan());
+                }
+            }
+        }
+    }
+}
+
+TEST(MxL0TilePlan, KeepsComputeDimensionsLegalAcrossMxTypesAndTransposes)
+{
+    // Match the dtypes admitted by IsMxBasicApiCapable; FP4 E1M2 is not an enabled route.
+    for (auto dtype : {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2}) {
+        MxTiling tiling(dtype);
+        const uint64_t elementBits = dtype == ge::DT_FLOAT4_E2M1 ? 4 : 8;
+        for (bool transA : {false, true}) {
+            for (bool transB : {false, true}) {
+                const uint64_t m = transA ? 64 : 16;
+                const uint64_t n = transB ? 16 : 64;
+                for (uint64_t kL1 : {64UL, 256UL, 4096UL, 8064UL, 8192UL, 16384UL}) {
+                    SCOPED_TRACE(::testing::Message() << "dtype=" << dtype << ", transA=" << transA
+                                                      << ", transB=" << transB << ", kL1=" << kL1);
+                    const auto plan = tiling.SelectMxL0TilePlan(m, n, kL1, L0_AB_BYTES, L0_AB_BYTES, L0_C_BYTES, transA,
+                                                                transB);
+                    ASSERT_NE(plan.baseK, 0U);
+                    EXPECT_LT(plan.baseK, 4096U);
+                    EXPECT_LT(plan.mL0, 4096U);
+                    EXPECT_LT(plan.nL0, 4096U);
+                    EXPECT_EQ(plan.baseK % 64U, 0U);
+                    EXPECT_EQ(kL1 % plan.baseK, 0U);
+                    EXPECT_LE(plan.mL0 * plan.baseK * elementBits / 8, L0_AB_BYTES / 2);
+                    EXPECT_LE(plan.nL0 * plan.baseK * elementBits / 8, L0_AB_BYTES / 2);
+                    EXPECT_LE(plan.mL0 * plan.nL0 * sizeof(float), L0_C_BYTES / 2);
+                }
+            }
+        }
+    }
+}
+
+namespace {
+class MxL1Probe : public optiling::AdaptiveSlidingWindowMXBasicAPITiling {
+public:
+    MxL1Probe() : AdaptiveSlidingWindowMXBasicAPITiling(nullptr)
+    {
+        inputParams_.Reset();
+        inputParams_.kSize = 6144;
+        inputParams_.aDtype = inputParams_.bDtype = ge::DT_FLOAT8_E4M3FN;
+        inputParams_.scaleDtype = inputParams_.perTokenScaleDtype = ge::DT_FLOAT8_E8M0;
+        inputParams_.isMxPerGroup = true;
+        inputParams_.batchC = 1;
+        compileInfo_.npuArch = NpuArch::DAV_3510;
+        inputParams_.transA = false;
+        inputParams_.transB = true;
+        aicoreParams_.l1Size = 524288;
+    }
+    bool IsTensorApiEnabled() const override { return tensorApiEnabled; }
+    bool tensorApiEnabled = true;
+    using AdaptiveSlidingWindowMXBasicAPITiling::aicoreParams_;
+    using AdaptiveSlidingWindowMXBasicAPITiling::basicTiling_;
+    using AdaptiveSlidingWindowMXBasicAPITiling::compileInfo_;
+    using AdaptiveSlidingWindowMXBasicAPITiling::inputParams_;
+    using AdaptiveSlidingWindowMXBasicAPITiling::tilingData_;
+};
+} // namespace
+
+TEST(MxL1ThreeBufferPlan, PreservesFeasibleWindowsAndSupportsFp4)
+{
+    MxL1Probe tiling;
+    for (uint64_t window : {2048UL, 4096UL}) {
+        MxL1Probe::MxL1EstimateParams params{256, window, 256, 256, false};
+        const auto plan = tiling.SelectMxL1Plan(params, 128, window);
+        EXPECT_EQ(plan.l1BufferNum, 3U);
+        EXPECT_EQ(plan.scaleKL1, window);
+    }
+    MxL1Probe::MxL1EstimateParams params{256, 6144, 256, 256, false};
+    EXPECT_TRUE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    EXPECT_EQ(params.scaleKL1, 4096UL);
+    tiling.inputParams_.aDtype = tiling.inputParams_.bDtype = ge::DT_FLOAT4_E2M1;
+    params = {512, 6144, 256, 256, false};
+    EXPECT_TRUE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    EXPECT_EQ(params.scaleKL1, 4096UL);
+    params = {256, 6144, 256, 256, false};
+    const auto plan = tiling.SelectMxL1Plan(params, 128, params.scaleKL1);
+    EXPECT_EQ(plan.l1BufferNum, 4U);
+    EXPECT_EQ(plan.scaleKL1, 6144UL);
+}
+
+TEST(MxL1ThreeBufferPlan, PreservesTensorApiEligibility)
+{
+    MxL1Probe tiling;
+    const MxL1Probe::MxL1EstimateParams params{256, 6144, 256, 256, false};
+    tiling.tensorApiEnabled = false;
+    EXPECT_FALSE(tiling.CanFitL1BufferNum(params, 3));
+    const auto plan = tiling.SelectMxL1Plan(params, 128, params.scaleKL1);
+    EXPECT_EQ(plan.l1BufferNum, 2U);
+    EXPECT_EQ(plan.scaleKL1, params.scaleKL1);
+}
+
+TEST(MxL1ThreeBufferPlan, KeepsOriginalFourBufferCandidates)
+{
+    MxL1Probe tiling;
+    tiling.inputParams_.kSize = 8192;
+    auto plan = tiling.SelectMxL1Plan({512, 8192, 80, 160, false}, 128, 8192);
+    EXPECT_EQ(plan.l1BufferNum, 4U);
+    EXPECT_EQ(plan.kL1, 256UL);
+    EXPECT_EQ(plan.scaleKL1, 8192UL);
+    tiling.inputParams_.kSize = 5120;
+    tiling.inputParams_.aDtype = tiling.inputParams_.bDtype = ge::DT_FLOAT4_E2M1;
+    plan = tiling.SelectMxL1Plan({1024, 5120, 80, 144, false}, 256, 5120);
+    EXPECT_EQ(plan.l1BufferNum, 4U);
+    EXPECT_EQ(plan.kL1, 512UL);
+    EXPECT_EQ(plan.scaleKL1, 5120UL);
+}
+
+TEST(MxL1ThreeBufferPlan, PreservesWindowOnFailure)
+{
+    MxL1Probe tiling;
+    MxL1Probe::MxL1EstimateParams params{256, 6144, 256, 256, false};
+    tiling.aicoreParams_.l1Size = 410000;
+    EXPECT_FALSE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    EXPECT_EQ(params.scaleKL1, 6144UL);
+    params.kL1 = 0;
+    EXPECT_FALSE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    params.kL1 = 255;
+    EXPECT_FALSE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    params.kL1 = 256;
+    tiling.inputParams_.kSize = 0;
+    EXPECT_FALSE(tiling.TryShrinkMxThreeBufferScaleKL1(params));
+    EXPECT_EQ(params.scaleKL1, 6144UL);
 }

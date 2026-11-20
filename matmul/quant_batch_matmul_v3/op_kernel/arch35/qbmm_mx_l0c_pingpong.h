@@ -69,12 +69,19 @@ __aicore__ inline void QbmmMxL0CPingpongTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM
                           static_cast<uint32_t>(matmulTiling.weightMustHitL2)};
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
-        {aGM, bGM, cGM, bias, perTokenScale, scale},
+        {aGM, bGM, cGM, bias, perTokenScale, scale, slidingWindowParams.mL0, slidingWindowParams.nL0},
         {matmulTiling.kBL1, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
          slidingWindowParams.nTailMain},
         qbmmParams};
+    auto& blockParams = params.mmadParams;
+    blockParams.problemShape = params.problemShape;
+    blockParams.l1TileShape = {matmulTiling.baseM, matmulTiling.baseN, matmulTiling.kBL1, 0};
+    blockParams.kL0 = matmulTiling.baseK;
+    blockParams.l1Params = params.l1Params;
+    blockParams.isBias = matmulTiling.isBias == 1;
+    blockParams.dbL0C = matmulTiling.dbL0C > 1;
     MatmulKernel qbmm;
     qbmm(params);
 }
@@ -107,13 +114,20 @@ __aicore__ inline void QbmmMxL0CPingpongWithoutBatchTensorApiKernel(GM_ADDR aGM,
         quantBmmTilingData = *static_cast<const DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
             tilingData);
 
-    MatmulKernel{}(
-        Params{{quantBmmTilingData.m, quantBmmTilingData.n, quantBmmTilingData.k, 1L},
-               {aGM, bGM, cGM, bias, perTokenScale, scale},
-               {quantBmmTilingData.kBL1, quantBmmTilingData.scaleKL1, quantBmmTilingData.nBufferNum},
-               {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.mTailTile,
-                quantBmmTilingData.nTailTile, quantBmmTilingData.mBaseTailSplitCnt,
-                quantBmmTilingData.nBaseTailSplitCnt, quantBmmTilingData.mTailMain, quantBmmTilingData.nTailMain},
-               {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.baseK, quantBmmTilingData.isBias,
-                quantBmmTilingData.dbL0C, quantBmmTilingData.weightMustHitL2}});
+    Params params{{quantBmmTilingData.m, quantBmmTilingData.n, quantBmmTilingData.k, 1L},
+                  {aGM, bGM, cGM, bias, perTokenScale, scale, quantBmmTilingData.mL0, quantBmmTilingData.nL0},
+                  {quantBmmTilingData.kBL1, quantBmmTilingData.scaleKL1, quantBmmTilingData.nBufferNum},
+                  {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.mTailTile,
+                   quantBmmTilingData.nTailTile, quantBmmTilingData.mBaseTailSplitCnt,
+                   quantBmmTilingData.nBaseTailSplitCnt, quantBmmTilingData.mTailMain, quantBmmTilingData.nTailMain},
+                  {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.baseK,
+                   quantBmmTilingData.isBias, quantBmmTilingData.dbL0C, quantBmmTilingData.weightMustHitL2}};
+    auto& blockParams = params.mmadParams;
+    blockParams.problemShape = params.problemShape;
+    blockParams.l1TileShape = {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.kBL1, 0};
+    blockParams.kL0 = quantBmmTilingData.baseK;
+    blockParams.l1Params = params.l1Params;
+    blockParams.isBias = quantBmmTilingData.isBias == 1;
+    blockParams.dbL0C = quantBmmTilingData.dbL0C > 1;
+    MatmulKernel{}(params);
 }

@@ -63,13 +63,6 @@ static void NormalizeTensorApiWithoutBatchPadding(const void* data, size_t dataS
     if (dataSize > paddingOffset) {
         normalized[paddingOffset] = 0;
     }
-    constexpr size_t tailPaddingOffset = offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData,
-                                                  windowLen) +
-                                         sizeof(uint32_t);
-    for (size_t i = tailPaddingOffset;
-         i < dataSize && i < sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData); ++i) {
-        normalized[i] = 0;
-    }
 }
 
 template <typename T>
@@ -1320,6 +1313,7 @@ TEST(QuantBatchMatmulV3StreamKAllSk, DoubleFp32ScaleRequiresAllSkOnlyWithPostBia
 {
     QBMMV3StreamKTiling tiling(nullptr);
     auto& input = tiling.inputParams_;
+    input.Reset();
     input.aFormat = ge::FORMAT_ND;
     input.bFormat = ge::FORMAT_ND;
     input.cFormat = ge::FORMAT_ND;
@@ -1353,6 +1347,7 @@ TEST(QuantBatchMatmulV3StreamKPostDequantBias, SupportsInt8MatchingFloatingBiasO
 {
     QBMMV3StreamKTiling tiling(nullptr);
     auto& input = tiling.inputParams_;
+    input.Reset();
     input.aFormat = ge::FORMAT_ND;
     input.bFormat = ge::FORMAT_ND;
     input.cFormat = ge::FORMAT_ND;
@@ -1391,6 +1386,7 @@ TEST(QuantBatchMatmulV3StreamKDtype, RejectsHifloat8AndFp8MixedPair)
 {
     QBMMV3StreamKTiling tiling(nullptr);
     auto& input = tiling.inputParams_;
+    input.Reset();
     input.aFormat = ge::FORMAT_ND;
     input.bFormat = ge::FORMAT_ND;
     input.cFormat = ge::FORMAT_ND;

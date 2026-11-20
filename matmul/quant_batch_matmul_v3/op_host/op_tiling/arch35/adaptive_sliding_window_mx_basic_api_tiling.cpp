@@ -16,7 +16,9 @@
 #include "adaptive_sliding_window_mx_basic_api_tiling.h"
 
 #include <algorithm>
+#include <limits>
 
+#include "error_util.h"
 #include "log/log.h"
 #include "op_host/tiling_templates_registry.h"
 #include "base_block_calculator.h"
@@ -27,6 +29,9 @@
 
 namespace {
 constexpr uint32_t STEP_K_TWO = 2U;
+// L0 capacity alone does not guarantee encodable MMAD dimensions.
+constexpr uint64_t MMAD_DIM_LIMIT = 4095UL;
+constexpr uint64_t MX_BIAS_TABLE_SIZE = 4UL * 1024UL;
 // Empirical value for the L0C ping-pong template.
 constexpr uint64_t MX_L0C_PINGPONG_SCALE_KL1_TARGET = 2048UL;
 constexpr uint64_t MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT = 128UL * 1024UL * 1024UL;
@@ -99,6 +104,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
     }
     withoutBatchTilingData_ = DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData();
     useWithoutBatchTilingData_ = false;
+    mxL0CPingpongEligibility_ = {};
+    useMxL0CPingpong_ = false;
     tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 }
 
@@ -148,12 +155,10 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
 {
-    // L0C ping-pong remains a DAV_3510-only template; DAV_9201/DAV_9202 does not register kernel type 9/10.
-    const bool useMxL0CPingpong = compileInfo_.npuArch == Ops::Base::DAV_3510 && IsMxL0CPingpong(inputParams_);
-    if (isAFullLoad_ && useMxL0CPingpong) {
+    if (isAFullLoad_ && useMxL0CPingpong_) {
         return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
     }
-    if (useMxL0CPingpong) {
+    if (useMxL0CPingpong_) {
         return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG);
     }
     if (isAFullLoad_) {
@@ -233,11 +238,7 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::CalL1Tiling()
     basicTiling_.stepKb = static_cast<uint32_t>(l1TilingData.stepKb_);
     basicTiling_.scaleFactorA = static_cast<uint32_t>(l1TilingData.scaleFactorA_);
     basicTiling_.scaleFactorB = static_cast<uint32_t>(l1TilingData.scaleFactorB_);
-    return true;
-}
 
-ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
-{
     tilingData_.matmulTiling.m = inputParams_.mSize;
     tilingData_.matmulTiling.n = inputParams_.nSize;
     tilingData_.matmulTiling.k = inputParams_.kSize;
@@ -248,16 +249,119 @@ ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
     tilingData_.matmulTiling.isBias = inputParams_.hasBias ? 1UL : 0UL;
     tilingData_.matmulTiling.dbL0C = static_cast<uint8_t>(basicTiling_.dbL0c);
 
-    // DeriveScaleKL1 shrinks basicTiling_.scaleFactorA/B in place when the L0C ping-pong template fires; those
-    // adjusted factors flow into mxTypePara later, so the in-place write-back must be preserved.
+    // The legacy scale cap must be applied before choosing the L1 window used to plan the L0 tile.
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(
         DeriveScaleKL1(basicTiling_.scaleFactorA, basicTiling_.stepKa, basicTiling_.scaleFactorB, basicTiling_.stepKb,
                        basicTiling_.baseK));
     CalculateNBufferNum();
-    if (useWithoutBatchTilingData_) {
-        SetWithoutBatchTilingData();
+    return ApplyMxL0CPingpongPlan();
+}
+
+bool AdaptiveSlidingWindowMXBasicAPITiling::ApplyMxL0CPingpongPlan()
+{
+    auto& cube = tilingData_.matmulTiling;
+    // BT uses two FP32 slots indexed by the scale buffer, independently of dbL0C.
+    // Its stride is the L1 baseN, so splitting nL0 or disabling L0C DB cannot make it fit.
+    OP_TILING_CHECK(
+        (mxL0CPingpongEligibility_.explicitPlan || mxL0CPingpongEligibility_.legacyTail) && inputParams_.hasBias &&
+            cube.baseN > MX_BIAS_TABLE_SIZE / sizeof(float) / qmmv3_tiling_const::DOUBLE_BUFFER_NUM,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "MX bias table exceeds capacity: baseN(%u), BT size(%lu).",
+                              cube.baseN, MX_BIAS_TABLE_SIZE),
+        return false);
+    MxL0TilePlan plan{};
+    if (mxL0CPingpongEligibility_.explicitPlan) {
+        plan = SelectMxL0TilePlan(cube.baseM, cube.baseN, cube.kBL1, compileInfo_.l0aSize, compileInfo_.l0bSize,
+                                  compileInfo_.l0cSize, inputParams_.transA, inputParams_.transB);
     }
-    return ge::GRAPH_SUCCESS;
+    tilingData_.adaptiveSlidingWin.mL0 = static_cast<uint16_t>(plan.mL0);
+    tilingData_.adaptiveSlidingWin.nL0 = static_cast<uint16_t>(plan.nL0);
+    useMxL0CPingpong_ = plan.mL0 != 0 || mxL0CPingpongEligibility_.legacyTail;
+    if (plan.mL0 != 0) {
+        cube.baseK = plan.baseK;
+        cube.dbL0C = qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    }
+    return true;
+}
+
+ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+// Native MX, FP32 accumulation. Input dtype determines L0 capacity and transpose alignment.
+AdaptiveSlidingWindowMXBasicAPITiling::MxL0TilePlan AdaptiveSlidingWindowMXBasicAPITiling::SelectMxL0TilePlan(
+    uint64_t baseM, uint64_t baseN, uint64_t kL1, uint64_t l0aBytes, uint64_t l0bBytes, uint64_t l0cBytes, bool transA,
+    bool transB) const
+{
+    constexpr uint64_t MAX_TILE_DIM = std::numeric_limits<uint16_t>::max();
+    constexpr uint64_t MIN_COMPUTE_K = 128;
+    if (baseM == 0 || baseN == 0 || kL1 == 0 || kL1 % qmmv3_tiling_const::MXFP_DIVISOR_SIZE != 0 ||
+        baseM > MAX_TILE_DIM || baseN > MAX_TILE_DIM || baseM * baseN * sizeof(float) > l0cBytes) {
+        return {};
+    }
+    // L1-to-L0 copies index the inner operand axis in 32-byte units and the outer axis in 16-row tiles.
+    const uint64_t mAlign = transA ? GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype) :
+                                     qmmv3_tiling_const::CUBE_BLOCK;
+    const uint64_t nAlign = transB ? qmmv3_tiling_const::CUBE_BLOCK :
+                                     GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype);
+    const uint64_t l0aElements = GetShapeWithDataType(l0aBytes / qmmv3_tiling_const::DOUBLE_BUFFER_NUM,
+                                                      inputParams_.aDtype);
+    const uint64_t l0bElements = GetShapeWithDataType(l0bBytes / qmmv3_tiling_const::DOUBLE_BUFFER_NUM,
+                                                      inputParams_.bDtype);
+    // Prefer no split, then split N, then split M.
+    const uint64_t splitFactors[][2] = {{1, 1}, {1, 2}, {2, 1}};
+    for (const auto& split : splitFactors) {
+        if (baseM % split[0] != 0 || baseN % split[1] != 0) {
+            continue;
+        }
+        const uint64_t m = baseM / split[0];
+        const uint64_t n = baseN / split[1];
+        if (m > MMAD_DIM_LIMIT || n > MMAD_DIM_LIMIT || m % mAlign != 0 || n % nAlign != 0 ||
+            m * n * sizeof(float) > l0cBytes / qmmv3_tiling_const::DOUBLE_BUFFER_NUM) {
+            continue;
+        }
+        uint64_t k = std::min({MMAD_DIM_LIMIT, l0aElements / m, l0bElements / n,
+                               std::max(qmmv3_tiling_const::MXFP_DIVISOR_SIZE, kL1 / qmmv3_tiling_const::NUM_HALF)});
+        k = k / qmmv3_tiling_const::MXFP_DIVISOR_SIZE * qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
+        while (k != 0 && kL1 % k != 0) {
+            k -= qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
+        }
+        // Avoid excessively small compute K; this is a performance threshold.
+        if (k != 0 && k >= std::min(kL1 / qmmv3_tiling_const::NUM_HALF, MIN_COMPUTE_K)) {
+            return {static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k)};
+        }
+    }
+    return {};
+}
+
+// Caller has checked three-buffer eligibility and that the original window exceeds L1 capacity.
+bool AdaptiveSlidingWindowMXBasicAPITiling::TryShrinkMxThreeBufferScaleKL1(MxL1EstimateParams& params) const
+{
+    // Keep enough kL1 blocks per scale window to avoid frequent scale reloads.
+    constexpr uint64_t MIN_SCALE_KL1_BLOCKS = 4;
+    const uint64_t kL1 = params.kL1;
+    if (inputParams_.kSize == 0 || kL1 == 0 || kL1 % qmmv3_tiling_const::MXFP_DIVISOR_SIZE != 0 ||
+        params.scaleKL1 == 0 || params.scaleKL1 > std::numeric_limits<uint32_t>::max()) {
+        return false;
+    }
+    const uint64_t kBlocks = ops::CeilDiv(inputParams_.kSize, kL1);
+    uint64_t low = std::min(MIN_SCALE_KL1_BLOCKS, kBlocks);
+    uint64_t high = std::min(kBlocks, (params.scaleKL1 - 1) / kL1);
+    uint64_t selectedBlocks = 0;
+    MxL1EstimateParams candidate = params;
+    // Feasible windows form a prefix; find its largest kL1-aligned member.
+    while (low <= high) {
+        const uint64_t mid = low + (high - low) / 2;
+        candidate.scaleKL1 = mid * kL1;
+        if (CalcUsedL1Size(candidate, qmmv3_tiling_const::L1_THREE_BUFFER) <= aicoreParams_.l1Size) {
+            selectedBlocks = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    if (selectedBlocks == 0) {
+        return false;
+    }
+    params.scaleKL1 = selectedBlocks * kL1;
+    return true;
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum()
@@ -298,8 +402,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::DeriveScaleKL1(uint32_t& scaleFa
     uint64_t scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
                                  static_cast<uint64_t>(scaleFactorB) * stepKb * baseK);
     const uint64_t outputSize = GetSizeWithDataType(inputParams_.mSize * inputParams_.nSize, inputParams_.cDtype);
-    if (compileInfo_.npuArch == Ops::Base::DAV_3510 && IsMxL0CPingpong(inputParams_) &&
-        outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT && scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
+    if (mxL0CPingpongEligibility_.legacyTail && outputSize <= MX_L0C_PINGPONG_OUTPUT_SIZE_LIMIT &&
+        scaleKL1 > MX_L0C_PINGPONG_SCALE_KL1_TARGET) {
         AdjustScaleFactorForL0CPingpong(scaleFactorA, static_cast<uint32_t>(stepKa), static_cast<uint32_t>(baseK));
         AdjustScaleFactorForL0CPingpong(scaleFactorB, static_cast<uint32_t>(stepKb), static_cast<uint32_t>(baseK));
         scaleKL1 = std::min(static_cast<uint64_t>(scaleFactorA) * stepKa * baseK,
@@ -308,14 +412,21 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::DeriveScaleKL1(uint32_t& scaleFa
     return scaleKL1;
 }
 
-AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPITiling::MakeMxL1Plan(
-    const MxL1EstimateParams& params, uint32_t l1BufferNum) const
+bool AdaptiveSlidingWindowMXBasicAPITiling::MakeMxL1Plan(MxL1EstimateParams params, uint32_t l1BufferNum,
+                                                         MxL1Plan& plan) const
 {
-    // Two-buffer keeps the (possibly half-K fallback) scaleKL1; multi-buffer tries to widen scale to full-K coverage.
-    const uint64_t scaleKL1 = l1BufferNum == qmmv3_tiling_const::L1_TWO_BUFFER ?
-                                  params.scaleKL1 :
-                                  GetFullCoverScaleKL1IfPossible(params, l1BufferNum);
-    return {params.kL1, scaleKL1, l1BufferNum};
+    if (l1BufferNum == qmmv3_tiling_const::L1_TWO_BUFFER) {
+        plan = {params.kL1, params.scaleKL1, l1BufferNum};
+        return true;
+    }
+    if (CanFitL1BufferNum(params, l1BufferNum)) {
+        params.scaleKL1 = GetFullCoverScaleKL1IfPossible(params, l1BufferNum);
+    } else if (l1BufferNum != qmmv3_tiling_const::L1_THREE_BUFFER || !IsTensorApiEnabled() ||
+               !IsMxBasicApiCapable(inputParams_) || !TryShrinkMxThreeBufferScaleKL1(params)) {
+        return false;
+    }
+    plan = {params.kL1, params.scaleKL1, l1BufferNum};
+    return true;
 }
 
 AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPITiling::SelectMxL1Plan(
@@ -325,8 +436,9 @@ AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPIT
     const uint64_t stepK = currentKL1 / baseK;
     // Restrict the smaller stepK=2 candidates to cases where the current double buffer cannot cover K.
     const bool isCurrentTwoBufferNotOverK = currentKL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize;
-    if (CanFitL1BufferNum(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER)) {
-        return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
+    MxL1Plan plan{};
+    if (MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_FOUR_BUFFER, plan)) {
+        return plan;
     }
 
     // If stepK 3/4 blocks four-buffer from fitting L1 while two-buffer still cannot cover K,
@@ -339,27 +451,20 @@ AdaptiveSlidingWindowMXBasicAPITiling::MxL1Plan AdaptiveSlidingWindowMXBasicAPIT
         stepKTwoParams = BuildL1EstimateParams(stepKTwoKL1, baseScaleKL1, currentParams.baseM, currentParams.baseN,
                                                currentParams.isAFullLoad);
         // Prefer four buffers globally, even when it requires a smaller stepK.
-        if (CanFitL1BufferNum(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER)) {
-            return MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER);
+        if (MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_FOUR_BUFFER, plan)) {
+            return plan;
         }
     }
 
-    // A full-load uses the third buffer only for the B-side pipeline. Otherwise, keep the current stepK and enable
-    // triple-buffer only when the current double buffer cannot cover K and MTE2 is expected to dominate.
-    const bool canUseCurrentThreeBuffer = currentParams.isAFullLoad ||
-                                          (isCurrentTwoBufferNotOverK &&
-                                           IsMte2Bound(qmmv3_tiling_const::DAV_3510_MAX_HBM_BW_TBPS *
-                                                           qmmv3_tiling_const::MTE2_BW_UTILIZATION,
-                                                       qmmv3_tiling_const::DAV_3510_MAX_L2_BW_TBPS *
-                                                           qmmv3_tiling_const::MTE2_BW_UTILIZATION));
-    if (canUseCurrentThreeBuffer && CanFitL1BufferNum(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER)) {
-        return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER);
+    // Keep the existing A-full-load and K-coverage gates; remove only the MTE2-bound restriction.
+    const bool canUseCurrentThreeBuffer = currentParams.isAFullLoad || isCurrentTwoBufferNotOverK;
+    if (canUseCurrentThreeBuffer && MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_THREE_BUFFER, plan)) {
+        return plan;
     }
-    if (canReduceStepK && canUseCurrentThreeBuffer &&
-        CanFitL1BufferNum(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER)) {
-        return MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER);
+    if (canReduceStepK && MakeMxL1Plan(stepKTwoParams, qmmv3_tiling_const::L1_THREE_BUFFER, plan)) {
+        return plan;
     }
-    return MakeMxL1Plan(currentParams, qmmv3_tiling_const::L1_TWO_BUFFER);
+    return {currentParams.kL1, currentParams.scaleKL1, qmmv3_tiling_const::L1_TWO_BUFFER};
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::CanReduceStepKToTwo(uint64_t stepKTwoKL1) const
@@ -477,47 +582,6 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::ShouldKeepAFullLoadByRepeatLoadRatio
     return repeatABytes / totalLoadBytes > REPEAT_A_LOAD_RATIO_THRESHOLD;
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const
-{
-    const uint64_t usedCoreNum = CalUsedCoreNum();
-    if (gmBandwidthTbps <= 0.0 || l2BandwidthTbps <= 0.0 || adaptiveWin_.baseM == 0UL || adaptiveWin_.baseN == 0UL ||
-        usedCoreNum == 0UL) {
-        return false;
-    }
-
-    if (!AreOperandInnerAxesAligned()) {
-        return true;
-    }
-
-    return EstimateMte2TimeUs(gmBandwidthTbps, l2BandwidthTbps) > EstimateMacTimeUs();
-}
-
-double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const
-{
-    const double singleRoundABytes = static_cast<double>(
-        CalcMxFullKLoadSize(inputParams_.mSize, inputParams_.aDtype, inputParams_.perTokenScaleDtype));
-    const double singleRoundBBytes = static_cast<double>(
-        CalcMxFullKLoadSize(inputParams_.nSize, inputParams_.bDtype, inputParams_.scaleDtype));
-    const double singleRoundBiasBytes = inputParams_.hasBias ? static_cast<double>(GetSizeWithDataType(
-                                                                   inputParams_.nSize, inputParams_.biasDtype)) :
-                                                               0.0;
-    const uint64_t mBlockCnt = ops::CeilDiv(inputParams_.mSize, adaptiveWin_.baseM);
-    const uint64_t nBlockCnt = ops::CeilDiv(inputParams_.nSize, adaptiveWin_.baseN);
-    const uint64_t batchCount = std::max<uint64_t>(1UL, inputParams_.batchC);
-    // IsMte2Bound is reached only by a non-full plan, so A is loaded once for every N block.
-    const uint64_t aLoadCount = batchCount * nBlockCnt;
-    const uint64_t bLoadCount = batchCount * mBlockCnt;
-    const uint64_t biasLoadCount = inputParams_.hasBias ? batchCount * mBlockCnt : 0UL;
-    const Mte2LoadEstimate estimate = {singleRoundABytes, singleRoundBBytes, singleRoundBiasBytes,
-                                       aLoadCount,        bLoadCount,        biasLoadCount};
-    return EstimateMte2LoadTimeUs(estimate, gmBandwidthTbps, l2BandwidthTbps);
-}
-
-double AdaptiveSlidingWindowMXBasicAPITiling::EstimateMacTimeUs() const
-{
-    return EstimateMatmulMacTimeUs(qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
-}
-
 void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
 {
     const MxTilingCapabilities& capabilities = GetMxTilingCapabilities(compileInfo_.npuArch);
@@ -565,6 +629,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::UpdateAFullLoadStatus()
 
 void AdaptiveSlidingWindowMXBasicAPITiling::AnalyseFullLoadInfo()
 {
+    // The full-load dry run and final L1 calculation use the same legacy scale-window gate.
+    mxL0CPingpongEligibility_ = GetMxL0CPingpongEligibility(inputParams_, compileInfo_.npuArch, IsTensorApiEnabled());
     isABFullLoad_ = false;
     isBFullLoad_ = false;
     UpdateAFullLoadStatus();
@@ -653,7 +719,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.scaleKL1 = tilingData_.matmulTiling.scaleKL1;
     withoutBatchTilingData_.baseM = static_cast<uint16_t>(basicTiling_.baseM);
     withoutBatchTilingData_.baseN = static_cast<uint16_t>(basicTiling_.baseN);
-    withoutBatchTilingData_.baseK = static_cast<uint16_t>(basicTiling_.baseK);
+    withoutBatchTilingData_.baseK = static_cast<uint16_t>(tilingData_.matmulTiling.baseK);
     withoutBatchTilingData_.kAL1 = tilingData_.matmulTiling.kAL1;
     withoutBatchTilingData_.kBL1 = tilingData_.matmulTiling.kBL1;
     withoutBatchTilingData_.groupSizeM = static_cast<uint16_t>(inputParams_.groupSizeM);
@@ -672,6 +738,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.nBufferNum = tilingData_.matmulTiling.nBufferNum;
     withoutBatchTilingData_.dbL0C = tilingData_.matmulTiling.dbL0C;
     withoutBatchTilingData_.weightMustHitL2 = tilingData_.matmulTiling.weightMustHitL2;
+    withoutBatchTilingData_.mL0 = tilingData_.adaptiveSlidingWin.mL0;
+    withoutBatchTilingData_.nL0 = tilingData_.adaptiveSlidingWin.nL0;
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowMXBasicAPITiling, supportedNpuArch,
