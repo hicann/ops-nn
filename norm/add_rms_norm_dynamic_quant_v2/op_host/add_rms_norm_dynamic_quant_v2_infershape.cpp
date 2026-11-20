@@ -12,6 +12,7 @@
  * \file add_rms_norm_dynamic_quant_v2_infershape.cpp
  * \brief
  */
+#include <string>
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
@@ -117,8 +118,11 @@ static ge::graphStatus FillKnownRankShapesV2(gert::InferShapeContext* context, c
     *outScale2Shape = gert::Shape({1});
 
     if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-        OP_CHECK_IF(outputMaskLen != NUM_FOUR,
-                    OP_LOGE(context, "When output_mask is not NULL, the array size must be 4."), return GRAPH_FAILED);
+        OP_CHECK_IF(
+            outputMaskLen != NUM_FOUR,
+            OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "output_mask", std::to_string(outputMaskLen).c_str(),
+                                         std::to_string(NUM_FOUR).c_str()),
+            return GRAPH_FAILED);
 
         const bool* v2OutputMask = static_cast<const bool*>(outputMaskAttr->GetData());
         if (v2OutputMask[0]) {
@@ -169,10 +173,22 @@ static ge::graphStatus FetchOptionalInputsAndAttr(gert::InferShapeContext* conte
     outputMaskAttr = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_OUTPUT_MASK_IDX);
 
     OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "gamma, smooth_scale1",
+                    (Ops::Base::ToString(*gammaShape) + ", " + Ops::Base::ToString(*smooth1Shape)).c_str(),
+                    "the optional input shape must equal gamma shape"),
+                return GRAPH_FAILED);
     OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
-    OP_CHECK_IF(betaExist && (*gammaShape != *betaShape), OP_LOGE(context, "GammaShape is not same to betaShape."),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "gamma, smooth_scale2",
+                    (Ops::Base::ToString(*gammaShape) + ", " + Ops::Base::ToString(*smooth2Shape)).c_str(),
+                    "the optional input shape must equal gamma shape"),
+                return GRAPH_FAILED);
+    OP_CHECK_IF(betaExist && (*gammaShape != *betaShape),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "gamma, beta",
+                    (Ops::Base::ToString(*gammaShape) + ", " + Ops::Base::ToString(*betaShape)).c_str(),
+                    "the optional input shape must equal gamma shape"),
                 return GRAPH_FAILED);
     *xShape = *x1Shape;
     *y1Shape = gert::Shape({1});
@@ -187,9 +203,10 @@ static ge::graphStatus FetchMainShapes(gert::InferShapeContext* context, const g
 {
     // get input shapes
     x1Shape = context->GetInputShape(X1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+    OP_CHECK_IF(x1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x1"), return ge::GRAPH_FAILED);
     gammaShape = context->GetInputShape(GAMMA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    OP_CHECK_IF(gammaShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "gamma"),
+                return ge::GRAPH_FAILED);
 
     // get output shapes
     y1Shape = context->GetOutputShape(Y1_IDX);
@@ -241,12 +258,24 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
         return GRAPH_FAILED;
     }
     OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "gamma, smooth_scale1",
+                    (Ops::Base::ToString(*gammaShape) + ", " + Ops::Base::ToString(*smooth1Shape)).c_str(),
+                    "the optional input shape must equal gamma shape"),
+                return GRAPH_FAILED);
     OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
-                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "gamma, smooth_scale2",
+                    (Ops::Base::ToString(*gammaShape) + ", " + Ops::Base::ToString(*smooth2Shape)).c_str(),
+                    "the optional input shape must equal gamma shape"),
+                return GRAPH_FAILED);
     gert::Shape outScaleShape;
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
+    OP_CHECK_IF(!ret,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    (std::to_string(x1Shape->GetDimNum()) + ", " + std::to_string(gammaShape->GetDimNum())).c_str(),
+                    "gamma rank must not exceed x1 rank"),
                 return GRAPH_FAILED);
     size_t outputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
 
@@ -352,7 +381,11 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2Regbase(gert::InferSha
     }
     gert::Shape outScaleShape;
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
+    OP_CHECK_IF(!ret,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    (std::to_string(x1Shape->GetDimNum()) + ", " + std::to_string(gammaShape->GetDimNum())).c_str(),
+                    "gamma rank must not exceed x1 rank"),
                 return GRAPH_FAILED);
     auto knownRet = FillKnownRankShapesV2(context, x1Shape, outScaleShape, y1Shape, y2Shape, y3Shape, y4Shape,
                                           outScale1Shape, outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist,

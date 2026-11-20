@@ -12,6 +12,7 @@
  * \file add_layer_norm_quant_tiling.cpp
  * \brief
  */
+#include "../../norm_common/op_host/norm_error_report.h"
 #include <vector>
 #include "op_host/tiling_util.h"
 #include "add_layer_norm_quant_tiling.h"
@@ -300,9 +301,15 @@ static inline bool GetAttrs(gert::TilingContext* context, TilingDataT* tiling, b
                             bool& enableAdditionalOutput)
 {
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Get attrs nullptr, tiling failed"),
+                return false);
 
     const char* qms = attrs->GetAttrPointer<char>(QUANT_MODE_IDX);
-    OP_CHECK_IF(nullptr == qms, OP_LOGE("GetAttrs", "Get required attr quantMode failed, tiling failed"), return false);
+    OP_CHECK_IF(nullptr == qms,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(),
+                                                    "Get required attr quantMode failed, tiling failed"),
+                return false);
     std::string quantModeStr = qms;
     isDynamicQuant = (quantModeStr == "dynamic");
     OP_LOGD("GetAttrs", "isDynamicQuant=%d", isDynamicQuant);
@@ -413,7 +420,8 @@ static inline bool ComputeFusedAxis(gert::TilingContext* context, AddLayerNormQu
     const auto& storageShape = inputShape->GetStorageShape();
     size_t dimNum = storageShape.GetDimNum();
     if (dimNum == 0) {
-        OP_LOGE(context, "x1 is a scalar, dimNum is 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x1", "0",
+                                                 "x1 must have at least one dimension");
         return false;
     }
     numRow = 1;
@@ -443,11 +451,13 @@ static inline bool ComputeFusedAxisV2(gert::TilingContext* context, AddLayerNorm
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
     if (xDimNum == 0) {
-        OP_LOGE(context, "x1 is a scalar, dimNum is 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x1", "0",
+                                                 "x1 must have at least one dimension");
         return false;
     }
     if (gammaDimNum == 0) {
-        OP_LOGE(context, "gamma is a scalar, dimNum is 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma", "0",
+                                                 "gamma must have at least one dimension");
         return false;
     }
     size_t normDimNum = gammaDimNum;
@@ -455,7 +465,12 @@ static inline bool ComputeFusedAxisV2(gert::TilingContext* context, AddLayerNorm
         normDimNum = gammaDimNum - 1;
     }
     if (normDimNum > xDimNum) {
-        OP_LOGE(context, "norm dim count %zu exceeds x dim count %zu, invalid shape", normDimNum, xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "x1 and gamma",
+            (std::to_string(xDimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
+            ("The normalization rank derived from gamma (" + std::to_string(normDimNum) +
+             ") must not exceed the x1 rank")
+                .c_str());
         return false;
     }
 
@@ -539,14 +554,19 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2Membase(gert::TilingContext* co
     bool isDynamicQuant = false;
     bool enableAdditionalOutput = false;
     OP_CHECK_IF(!GetAttrs(context, &tiling, isDynamicQuant, enableAdditionalOutput),
-                OP_LOGE(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
 
     auto scales1Shape = context->GetOptionalInputShape(SCALE1_IDX);
     uint32_t optionalScaleOffsetMode = ComputeOptCode(context);
 
     OP_CHECK_IF(!CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
-                OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
-                        optionalScaleOffsetMode),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "quantMode, scales1, scales2, zero_points1, zero_points2",
+                    (std::string(isDynamicQuant ? "dynamic" : "static") +
+                     ", optional mode=" + std::to_string(optionalScaleOffsetMode))
+                        .c_str(),
+                    "The optional scale/offset combination must match quantMode; dynamic quantization must not "
+                    "provide offsets, and static quantization requires a supported scale/offset combination"),
                 return ge::GRAPH_FAILED);
 
     tiling.set_scaleOffsetMode(optionalScaleOffsetMode);
@@ -573,7 +593,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2Membase(gert::TilingContext* co
     uint32_t numCore = 1;
     int32_t nlFirstdimPerCoreNum = 1;
     if (!ComputeFusedAxisV2(context, &tiling, numRow, numCol, dtSize)) {
-        OP_LOGE(context, "ComputeFusedAxisV2 failed");
+        OP_LOGE_WITHOUT_REPORT(context, "ComputeFusedAxisV2 failed");
         return ge::GRAPH_FAILED;
     }
     DoBlockTiling(context, &tiling, maxCoreNum, numRow, firstdimPerCore, numCore, nlFirstdimPerCoreNum);
@@ -607,14 +627,19 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     bool isDynamicQuant = false;
     bool enableAdditionalOutput = false;
     OP_CHECK_IF(!GetAttrs(context, &tiling, isDynamicQuant, enableAdditionalOutput),
-                OP_LOGE(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
 
     auto scale1Shape = context->GetOptionalInputShape(SCALE1_IDX);
     uint32_t optionalScaleOffsetMode = ComputeOptCode(context);
 
     OP_CHECK_IF(!CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
-                OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
-                        optionalScaleOffsetMode),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "quantMode, scales1, scales2, zero_points1, zero_points2",
+                    (std::string(isDynamicQuant ? "dynamic" : "static") +
+                     ", optional mode=" + std::to_string(optionalScaleOffsetMode))
+                        .c_str(),
+                    "The optional scale/offset combination must match quantMode; dynamic quantization must not "
+                    "provide offsets, and static quantization requires a supported scale/offset combination"),
                 return ge::GRAPH_FAILED);
 
     tiling.set_scaleOffsetMode(optionalScaleOffsetMode);
@@ -641,7 +666,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     uint32_t numCore = 1;
     int32_t nlFirstdimPerCoreNum = 1;
     OP_CHECK_IF(!ComputeFusedAxis(context, &tiling, numRow, numCol, dtSize),
-                OP_LOGE(context, "ComputeFusedAxis failed"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "ComputeFusedAxis failed"), return ge::GRAPH_FAILED);
     DoBlockTiling(context, &tiling, maxCoreNum, numRow, firstdimPerCore, numCore, nlFirstdimPerCoreNum);
 
     uint32_t rowPerTime;
@@ -661,7 +686,12 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     context->SetTilingKey(tilingKey);
 
     OP_CHECK_IF(tilingType == TILING_TYPE::SLICE_EXT,
-                OP_LOGE(context, "D-axis is too big to do AddLayerNormQuant compute"), return ge::GRAPH_FAILED);
+                Ops::NN::ErrorReport::UnsupportedCapability(
+                    context->GetNodeName(),
+                    "No supported UB tiling for reduction length=" + std::to_string(numCol) +
+                        ", dtypeBytes=" + std::to_string(dtSize) + ", availableUb=" + std::to_string(maxUbSize) +
+                        "; reduce the normalization dimension or use a supported implementation."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -721,7 +751,7 @@ static ge::graphStatus Tiling4AddLayerNormQuant(gert::TilingContext* context)
         }
         OP_LOGW(context, "AddLayerNormQuant Regbase tiling start");
         AddLayerNormQuantRegbaseTiling addLayerNormQuantRegTiling(context);
-        OP_CHECK_IF(!(addLayerNormQuantRegTiling.DoTiling()), OP_LOGE(context, "Tiling failed."),
+        OP_CHECK_IF(!(addLayerNormQuantRegTiling.DoTiling()), OP_LOGE_WITHOUT_REPORT(context, "Tiling failed."),
                     return ge::GRAPH_FAILED);
         OP_LOGW(context, "AddLayerNormQuant Regbase tiling success, set tiling data");
         AddLayerNormQuantRegbaseTilingData tiling;
@@ -824,8 +854,14 @@ inline ge::graphStatus GenSimplifiedKey4AddLayerNormQuant(gert::TilingContext* c
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
     OP_CHECK_IF((err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
-                OP_LOGE(context, "len of simplifiedKey exceeds max length."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(), "The generated simplifiedKey exceeds the internal max length: actual length=" +
+                                        std::to_string(strlen(simplifiedKey)) +
+                                        ", max length=" + std::to_string(MAX_LEN_SIMPLIFIED_KEY) +
+                                        "; internal simplified key generation overlength, not a user parameter error."),
+        return ge::GRAPH_FAILED);
     OP_LOGW("AddLayerNormQuant", "Finish AddLayerNormQuant genSimplifiedKey.");
     return ge::GRAPH_SUCCESS;
 }

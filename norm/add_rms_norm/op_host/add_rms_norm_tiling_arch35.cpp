@@ -15,6 +15,7 @@
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_ARCH35_H_
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_ARCH35_H_
 
+#include "../../norm_common/op_host/norm_error_report.h"
 #include <limits>
 #include "register/op_impl_registry.h"
 #include "add_rms_norm_tiling.h"
@@ -68,19 +69,28 @@ auto CeilDiv(T x, T y) -> T
     return y == 0 ? x : x / y + static_cast<T>(x % y != 0);
 }
 
+// A failed SplitAR attempt may fall back successfully to SplitD; keep its diagnostics log-only.
 ge::graphStatus SetRegbaseWorkspaceSize(gert::TilingContext* context, uint64_t userWorkspaceSize)
 {
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE_WITHOUT_REPORT(context, "SplitAR platformInfo is nullptr."),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     // 系统 workspace 大小由平台接口提供。
     const uint64_t systemWorkspaceSize = static_cast<uint64_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
     constexpr uint64_t maxWorkspaceSize = std::numeric_limits<size_t>::max();
-    OP_CHECK_IF(systemWorkspaceSize > maxWorkspaceSize || userWorkspaceSize > maxWorkspaceSize - systemWorkspaceSize,
-                OP_LOGE(context, "The total workspace size exceeds the size_t range."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        systemWorkspaceSize > maxWorkspaceSize || userWorkspaceSize > maxWorkspaceSize - systemWorkspaceSize,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "%s",
+                               ("Cannot represent total workspace: systemBytes=" + std::to_string(systemWorkspaceSize) +
+                                ", userBytes=" + std::to_string(userWorkspaceSize) +
+                                ", sizeTMax=" + std::to_string(maxWorkspaceSize) + "; reduce workspace requirements.")
+                                   .c_str()),
+        return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    OP_CHECK_IF(currentWorkspace == nullptr, OP_LOGE_WITHOUT_REPORT(context, "SplitAR currentWorkspace is nullptr."),
+                return ge::GRAPH_FAILED);
     currentWorkspace[0] = static_cast<size_t>(systemWorkspaceSize + userWorkspaceSize);
     return ge::GRAPH_SUCCESS;
 }
@@ -158,11 +168,22 @@ ge::graphStatus TilingReduceEmpty(gert::TilingContext* context, uint64_t numRow,
     // 空归约仅需写 A 个 rstd，按每核至少 32 KiB 输出控制启动开销。
     constexpr uint64_t singleCoreMinBytes = 32UL * 1024UL;
     constexpr uint64_t floatBytes = sizeof(float);
-    OP_CHECK_IF(numCore == 0, OP_LOGE(context, "The number of AIV cores cannot be zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(numCore == 0,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(),
+                                                    "Invalid platform AIV core count=" + std::to_string(numCore) +
+                                                        "; expected at least one core. Check platform metadata."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(numRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-                OP_LOGE(context, "numRow exceeds the int64_t range."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                    context->GetNodeName(), "x1",
+                    ("Outer dimension product " + std::to_string(numRow) + " exceeds INT64_MAX").c_str()),
+                return ge::GRAPH_FAILED);
     uint64_t elemsPerBlock = ubBlockSize / floatBytes;
-    OP_CHECK_IF(elemsPerBlock == 0, OP_LOGE(context, "The UB block size is smaller than one float element."),
+    OP_CHECK_IF(elemsPerBlock == 0,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(),
+                                                    "Invalid UB block size=" + std::to_string(ubBlockSize) +
+                                                        "; expected at least " + std::to_string(floatBytes) +
+                                                        " bytes for a float element. Check platform metadata."),
                 return ge::GRAPH_FAILED);
     uint64_t rowsPerMinBlock = singleCoreMinBytes / floatBytes;
     uint64_t blockNum = std::min(CeilDiv(numRow, rowsPerMinBlock), static_cast<uint64_t>(numCore));
@@ -282,20 +303,38 @@ ge::graphStatus TilingSplitD(gert::TilingContext* context, uint64_t numRow, uint
                              float epsilon, float avgFactor)
 {
     constexpr uint64_t uint32Max = std::numeric_limits<uint32_t>::max();
-    OP_CHECK_IF(numRow == 0 || numCol == 0 || numCore == 0 || curElementByte == 0,
-                OP_LOGE(context, "SplitD received an invalid zero dimension or platform parameter."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        numRow == 0 || numCol == 0 || numCore == 0 || curElementByte == 0,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(), "SplitD cannot execute with zero parameters: rows=" + std::to_string(numRow) +
+                                        ", columns=" + std::to_string(numCol) + ", cores=" + std::to_string(numCore) +
+                                        ", elementBytes=" + std::to_string(curElementByte) +
+                                        "; check empty-input dispatch and platform metadata"),
+        return ge::GRAPH_FAILED);
     // key=2000 的旧 TilingData 和 Kernel 均使用 uint32_t；超出其表示范围时明确失败，
     // 避免静默截断或 Host 侧倍增循环回绕。正常模式的超大 R 由 uint64_t 的 SplitAR 路径承接。
     OP_CHECK_IF(numRow > uint32Max || numCol > uint32Max,
-                OP_LOGE(context, "SplitD only supports numRow and numCol within the uint32_t range."),
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    ("SplitD requires outer and reduction dimension products within UINT32_MAX; actual " +
+                     std::to_string(numRow) + ", " + std::to_string(numCol))
+                        .c_str()),
                 return ge::GRAPH_FAILED);
     uint64_t alignElements = ALING_FACTOR_512 / curElementByte;
-    OP_CHECK_IF(alignElements == 0, OP_LOGE(context, "The 512-byte alignment cannot hold one input element."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        alignElements == 0,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(),
+            "The 512-byte alignment cannot hold one input element: alignFactor=" + std::to_string(ALING_FACTOR_512) +
+                ", elementBytes=" + std::to_string(curElementByte) + ", alignedElements=" +
+                std::to_string(alignElements) + "; elementBytes must not exceed alignFactor. Check the input dtype."),
+        return ge::GRAPH_FAILED);
     uint64_t numColAlign = CeilDiv(numCol, alignElements) * alignElements;
     OP_CHECK_IF(numColAlign > uint32Max,
-                OP_LOGE(context, "The aligned SplitD reduction length exceeds the uint32_t range."),
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "gamma",
+                                                         ("The aligned SplitD reduction length " +
+                                                          std::to_string(numColAlign) + " must not exceed UINT32_MAX")
+                                                             .c_str()),
                 return ge::GRAPH_FAILED);
     uint64_t rowFactor = vlfp32;
     uint64_t ubFactor = 1U;
@@ -316,9 +355,17 @@ ge::graphStatus TilingSplitD(gert::TilingContext* context, uint64_t numRow, uint
         ubLoop *= MULTI_FACTOR_2;
     }
     colBuferLength = ubFactor;
-    OP_CHECK_IF(blockFactor > uint32Max || rowFactor > uint32Max || ubFactor > uint32Max || ubLoop > uint32Max ||
-                    colBuferLength > uint32Max || useCoreNum > numCore,
-                OP_LOGE(context, "SplitD tiling parameters exceed their supported range."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        blockFactor > uint32Max || rowFactor > uint32Max || ubFactor > uint32Max || ubLoop > uint32Max ||
+            colBuferLength > uint32Max || useCoreNum > numCore,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(),
+            "Derived SplitD parameters do not fit the tiling representation: blockFactor=" +
+                std::to_string(blockFactor) + ", rowFactor=" + std::to_string(rowFactor) +
+                ", ubFactor=" + std::to_string(ubFactor) + ", ubLoop=" + std::to_string(ubLoop) +
+                ", columnBufferLength=" + std::to_string(colBuferLength) + ", usedCores=" + std::to_string(useCoreNum) +
+                ", platformCores=" + std::to_string(numCore) + "; check the selected SplitD route and platform limits"),
+        return ge::GRAPH_FAILED);
     uint32_t isNddma = numCol >= NDDMA_BETTER_STAGE ? 0U : 1U;
 
     AddRMSNormRegbaseTilingData tiling;
@@ -384,8 +431,15 @@ ge::graphStatus TilingSplitAR(gert::TilingContext* context, uint64_t numRow, uin
         return ge::GRAPH_FAILED;
     }
     uint64_t ubFactor = 1ULL << (UINT64_BIT_LEN - 1 - __builtin_clzll(ubFactorMax));
-    OP_CHECK_IF(ubFactor > std::numeric_limits<uint64_t>::max() / SPLIT_AR_MIN_DB_TILES_PER_CORE,
-                OP_LOGE(context, "The SplitAR DB tile threshold overflows uint64."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ubFactor > std::numeric_limits<uint64_t>::max() / SPLIT_AR_MIN_DB_TILES_PER_CORE,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "%s",
+                               ("The SplitAR DB tile threshold overflows uint64: ubFactor=" + std::to_string(ubFactor) +
+                                ", minDbTilesPerCore=" + std::to_string(SPLIT_AR_MIN_DB_TILES_PER_CORE) +
+                                "; their product must fit uint64. Check the platform-derived UB factor and binary-add "
+                                "capacity.")
+                                   .c_str()),
+        return ge::GRAPH_FAILED);
     uint64_t perCoreWorkMin = ubFactor * SPLIT_AR_MIN_DB_TILES_PER_CORE;
 
     // 单行至少容纳两份“每核 8 tile”的工作量。
@@ -424,15 +478,32 @@ ge::graphStatus TilingSplitAR(gert::TilingContext* context, uint64_t numRow, uin
 
     // workspace 按 [rBlockNum,numRowAlign] 存放各核对全部 A 行的 partial。
     OP_CHECK_IF(numRowAlign != 0 && useCoreNum > std::numeric_limits<uint64_t>::max() / numRowAlign,
-                OP_LOGE(context, "The SplitAR workspace element count overflows uint64."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "%s",
+                                       ("Cannot represent SplitAR workspace element count: coreCount=" +
+                                        std::to_string(useCoreNum) + ", alignedRows=" + std::to_string(numRowAlign) +
+                                        "; their product must fit uint64. Reduce workspace requirements.")
+                                           .c_str()),
+                return ge::GRAPH_FAILED);
     const uint64_t usrWsElementCount = useCoreNum * numRowAlign;
-    OP_CHECK_IF(usrWsElementCount > std::numeric_limits<uint64_t>::max() / sizeof(float),
-                OP_LOGE(context, "The SplitAR user workspace size overflows uint64."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        usrWsElementCount > std::numeric_limits<uint64_t>::max() / sizeof(float),
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "%s",
+                               ("Cannot represent SplitAR workspace byte count: elementCount=" +
+                                std::to_string(usrWsElementCount) + ", elementBytes=" + std::to_string(sizeof(float)) +
+                                "; their product must fit uint64. Reduce workspace requirements.")
+                                   .c_str()),
+        return ge::GRAPH_FAILED);
     const uint64_t usrWsSize = usrWsElementCount * sizeof(float);
-    OP_CHECK_IF(context->SetScheduleMode(BATCH_MODE_SCHEDULE) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Failed to set the schedule mode."), return ge::GRAPH_FAILED);
+    const auto scheduleStatus = context->SetScheduleMode(BATCH_MODE_SCHEDULE);
+    OP_CHECK_IF(scheduleStatus != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "%s",
+                                       ("SetScheduleMode failed for requested schedule mode=" +
+                                        std::to_string(BATCH_MODE_SCHEDULE) + ", rc=" + std::to_string(scheduleStatus) +
+                                        "; check the framework tiling context and supported schedule modes.")
+                                           .c_str()),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(SetRegbaseWorkspaceSize(context, usrWsSize) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Failed to set the SplitAR workspace size."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "Failed to set the SplitAR workspace size."), return ge::GRAPH_FAILED);
 
     AddRMSNormRegbaseSplitARTilingData tiling;
     tiling.set_numRow(numRow);
@@ -476,6 +547,10 @@ ge::graphStatus TilingSplitAR(gert::TilingContext* context, uint64_t numRow, uin
 ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
 {
     OP_LOGD(context, " TilingAddRmsNormRegbase");
+    OP_CHECK_IF(
+        context->GetPlatformInfo() == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Missing platform metadata for vector resources"),
+        return ge::GRAPH_FAILED);
     auto ptrCompileInfo = reinterpret_cast<const AddRmsNormCompileInfo*>(context->GetCompileInfo());
     uint32_t numCore;
     uint64_t ubSize;
@@ -487,7 +562,11 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         numCore = ptrCompileInfo->totalCoreNum;
         ubSize = ptrCompileInfo->totalUbSize;
     }
-    OP_CHECK_IF(numCore == 0, OP_LOGE(context, "The number of AIV cores cannot be zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(numCore == 0,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(),
+                                                    "Invalid platform AIV core count=" + std::to_string(numCore) +
+                                                        "; expected at least one core. Check platform metadata."),
+                return ge::GRAPH_FAILED);
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
 
     const gert::Shape gammaShape = context->GetInputShape(GAMMA_INDEX)->GetStorageShape();
@@ -495,27 +574,42 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
-    OP_CHECK_IF(*epsilon < 0, OP_LOGE(context, "epsilon must be nonnegative, but got %f.", *epsilon),
+    OP_CHECK_IF(*epsilon < 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "epsilon",
+                                                      std::to_string(*epsilon).c_str(), "epsilon must be nonnegative"),
                 return ge::GRAPH_FAILED);
     int64_t gammaSize = gammaShape.GetShapeSize();
     int64_t xSize = xShape.GetShapeSize();
     OP_CHECK_IF(gammaSize < 0 || xSize < 0,
-                OP_LOGE(context, "The input shape size exceeds the int64_t range or contains an invalid dim."),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(gammaShape)).c_str(),
+                    "Dimensions must be nonnegative and shape sizes must fit in int64_t"),
                 return ge::GRAPH_FAILED);
     uint64_t numCol = static_cast<uint64_t>(gammaSize);
     float avgFactor = (numCol == 0U) ? 0.0f : 1.0f / static_cast<float>(numCol);
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
-    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGE(context, "The rank of x cannot be smaller than the rank of gamma."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        xDimNum < gammaDimNum,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "x1, gamma", (std::to_string(xDimNum) + ", " + std::to_string(gammaDimNum)).c_str(),
+            "x1 rank must not be smaller than gamma rank"),
+        return ge::GRAPH_FAILED);
     uint64_t numRow = 1;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         int64_t dim = xShape.GetDim(i);
-        OP_CHECK_IF(dim < 0, OP_LOGE(context, "The input shape contains an invalid dim."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            dim < 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(xShape).c_str(),
+                                                  "All dimensions must be nonnegative"),
+            return ge::GRAPH_FAILED);
         uint64_t dimValue = static_cast<uint64_t>(dim);
-        OP_CHECK_IF(dimValue != 0 && numRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / dimValue,
-                    OP_LOGE(context, "The outer dimension product exceeds the int64_t range."),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            dimValue != 0 && numRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / dimValue,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(xShape).c_str(),
+                                                  "Outer dimension product must fit in int64_t"),
+            return ge::GRAPH_FAILED);
         numRow *= dimValue;
     }
     for (size_t i = 0; i < xDimNum; i++) {
@@ -534,7 +628,12 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     uint64_t ubfp32 = ubBlockSize / sizeof(float);
     uint64_t vlfp32 = Ops::Base::GetVRegSize(context) / sizeof(float);
     OP_CHECK_IF(ubBlockSize == 0 || ubfp32 == 0 || vlfp32 < NUM_2,
-                OP_LOGE(context, "Invalid UB block size or vector length."), return ge::GRAPH_FAILED);
+                Ops::NN::ErrorReport::TilingFailure(
+                    context->GetNodeName(),
+                    "Invalid platform resources: ubBlockBytes=" + std::to_string(ubBlockSize) +
+                        ", vectorFloatElements=" + std::to_string(vlfp32) +
+                        "; block must hold a float and vector must hold at least two floats. Check platform metadata."),
+                return ge::GRAPH_FAILED);
     uint64_t binaryAddElementMaxLen = vlfp32 * vlfp32 * NUM_2 * NUM_2;
 
     // 空张量(reduce empty)优先: 归一化维 R==0 且外维 A>0, 只有 rstd 输出需兜底
@@ -549,7 +648,12 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     bool enableBatchInvariant = (context->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL);
     OP_LOGD(context, " TilingAddRmsNormRegbase enableBatchInvariant: %d", enableBatchInvariant);
 
-    OP_CHECK_IF(ubSize <= UB_USED, OP_LOGE(context, "The available UB size is insufficient."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize <= UB_USED,
+                Ops::NN::ErrorReport::UnsupportedCapability(
+                    context->GetNodeName(),
+                    "Available UB=" + std::to_string(ubSize) + " must exceed reservedBytes=" + std::to_string(UB_USED) +
+                        "; select a platform with sufficient UB or a supported implementation."),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - UB_USED;
     SetDtypeKey(dataType, dtypeKey);
 
@@ -560,12 +664,20 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     context->SetBlockDim(useCoreNum);
 
     auto dtypeByteIterator = dTypeByteMap.find(dataType);
-    OP_CHECK_IF(dtypeByteIterator == dTypeByteMap.end(), OP_LOGE(context, "Unsupported input data type."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        dtypeByteIterator == dTypeByteMap.end(),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(dataType).c_str(),
+                                              "Supported dtypes are float32, float16 and bfloat16"),
+        return ge::GRAPH_FAILED);
     uint32_t curElementByte = dtypeByteIterator->second;
     uint32_t dataPerBlock = static_cast<uint32_t>(ubBlockSize / curElementByte);
-    OP_CHECK_IF(dataPerBlock == 0, OP_LOGE(context, "The UB block cannot hold one input element."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        dataPerBlock == 0,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(), "Invalid platform UB block size=" + std::to_string(ubBlockSize) +
+                                        ", inputElementBytes=" + std::to_string(curElementByte) +
+                                        "; block must hold at least one input element. Check platform metadata."),
+        return ge::GRAPH_FAILED);
     // 先按元素数做向上对齐，避免 R==INT64_MAX 时 R*sizeof(T) 中间值溢出。
     numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * dataPerBlock;
 

@@ -12,6 +12,7 @@
  * \file add_rms_norm_dynamic_quant_infershape.cpp
  * \brief
  */
+#include <string>
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
@@ -107,9 +108,11 @@ static ge::graphStatus FillKnownRankShapes(gert::InferShapeContext* context, con
     *outScale2Shape = gert::Shape({1});
 
     if (outputMaskLen != OUTPUT_MASK_NULLPTR_LEN) {
-        OP_CHECK_IF(outputMaskLen != OUTPUT_MASK_LEN,
-                    OP_LOGE(context, "When output_mask is not NULL, the array size must be %d.", OUTPUT_MASK_LEN),
-                    return GRAPH_FAILED);
+        OP_CHECK_IF(
+            outputMaskLen != OUTPUT_MASK_LEN,
+            OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "output_mask", std::to_string(outputMaskLen).c_str(),
+                                         std::to_string(OUTPUT_MASK_LEN).c_str()),
+            return GRAPH_FAILED);
         const bool* outputMask = static_cast<const bool*>(outputMaskAttr->GetData());
         if (outputMask[0]) {
             *y1Shape = *x1Shape;
@@ -140,9 +143,10 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
 
     // get input shapes
     const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+    OP_CHECK_IF(x1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x1"), return ge::GRAPH_FAILED);
     const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    OP_CHECK_IF(gammaShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "gamma"),
+                return ge::GRAPH_FAILED);
     // get output shapes
     gert::Shape* y1Shape = context->GetOutputShape(Y1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
@@ -160,7 +164,11 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
     *y2Shape = gert::Shape({1});
     gert::Shape outScaleShape;
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
+    OP_CHECK_IF(!ret,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    (std::to_string(x1Shape->GetDimNum()) + ", " + std::to_string(gammaShape->GetDimNum())).c_str(),
+                    "gamma rank must not exceed x1 rank"),
                 return GRAPH_FAILED);
 
     const gert::Shape* smooth1Shape = context->GetOptionalInputShape(SMOOTH1_IDX);
@@ -198,8 +206,8 @@ static graphStatus InferDataType4AddRmsNormDynamicQuant(gert::InferDataTypeConte
             yDtype = static_cast<ge::DataType>(dstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(
-                    context,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "dst_type", std::to_string(static_cast<int>(yDtype)).c_str(),
                     "attr dst_type only support 2(int8), 29(int4), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
                 return ge::GRAPH_FAILED);
         }
@@ -224,9 +232,10 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantRegbase(gert::InferShape
 
     // get input shapes
     const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+    OP_CHECK_IF(x1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x1"), return ge::GRAPH_FAILED);
     const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    OP_CHECK_IF(gammaShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "gamma"),
+                return ge::GRAPH_FAILED);
     // get output shapes
     gert::Shape* y1Shape = context->GetOutputShape(Y1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
@@ -259,7 +268,11 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantRegbase(gert::InferShape
     }
     gert::Shape outScaleShape;
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
+    OP_CHECK_IF(!ret,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1, gamma",
+                    (std::to_string(x1Shape->GetDimNum()) + ", " + std::to_string(gammaShape->GetDimNum())).c_str(),
+                    "gamma rank must not exceed x1 rank"),
                 return GRAPH_FAILED);
     auto knownRet = FillKnownRankShapes(context, x1Shape, outScaleShape, y1Shape, y2Shape, outScale1Shape,
                                         outScale2Shape, outputMaskAttr, outputMaskLen, smooth1Exist, smooth2Exist);
@@ -285,8 +298,8 @@ static graphStatus InferDataType4AddRmsNormDynamicQuantRegbase(gert::InferDataTy
             yDtype = static_cast<ge::DataType>(dstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(
-                    context,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "dst_type", std::to_string(static_cast<int>(yDtype)).c_str(),
                     "attr dst_type only support 2(int8), 29(int4), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
                 return ge::GRAPH_FAILED);
         }

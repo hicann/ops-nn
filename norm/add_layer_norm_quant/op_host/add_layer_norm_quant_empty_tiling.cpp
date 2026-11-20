@@ -14,6 +14,7 @@
  */
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
+#include "../../norm_common/op_host/norm_error_report.h"
 #include "add_layer_norm_quant_tiling.h"
 
 namespace optiling {
@@ -39,9 +40,19 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetPlatformInfo()
 ge::graphStatus AddLayerNormQuantEmptyTiling::GetAttrs()
 {
     const gert::RuntimeAttrs* attrs = context_->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(),
+                                                    "Get attrs nullptr, tiling failed. Tiling runtime attrs holder is "
+                                                    "missing, internal error, not a user parameter error."),
+                return ge::GRAPH_FAILED);
 
     const char* qms = attrs->GetAttrPointer<char>(QUANT_MODE_IDX);
-    OP_CHECK_IF(nullptr == qms, OP_LOGE("GetAttrs", "Get required attr quantMode failed, tiling failed"), return false);
+    OP_CHECK_IF(
+        nullptr == qms,
+        Ops::NN::ErrorReport::TilingFailure(
+            context_->GetNodeName(), "Get required attr quantMode failed, tiling failed. quant_mode is not "
+                                     "materialized by tiling runtime, internal error, not a user parameter error."),
+        return ge::GRAPH_FAILED);
     std::string quantModeStr = qms;
     isDyn_ = (quantModeStr == "dynamic");
     return ge::GRAPH_SUCCESS;
@@ -50,10 +61,11 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetAttrs()
 ge::graphStatus AddLayerNormQuantEmptyTiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t idx = 0; idx < shape.GetDimNum(); idx++) {
-        OP_CHECK_IF(shape.GetDim(idx) < 0,
-                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", idx,
-                            shape.GetDim(idx)),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            shape.GetDim(idx) < 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "input", std::to_string(shape.GetDim(idx)),
+                                                  "Dim " + std::to_string(idx) + " of input must be non-negative"),
+            return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -129,14 +141,23 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
     size_t elewiseDimNum = x1StorageShape.GetDimNum();
     size_t weightDimNum = gammaStorageShape.GetDimNum();
     OP_CHECK_IF((0 == elewiseDimNum || 0 == weightDimNum),
-                OP_LOGW(this->context_->GetNodeName(), "Got x1/gamma is zero dim tensor, tiling FAILED."),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "x1, gamma",
+                    (std::to_string(elewiseDimNum) + ", " + std::to_string(weightDimNum)).c_str(),
+                    "x1 and gamma must have at least one dimension"),
                 return ge::GRAPH_FAILED);
 
     bool elewiseShapeEqual = ((*x1Shape) == (*x2Shape)) && ((*x1Shape) == (*xShape)) && ((*x1Shape) == (*y1Shape));
     bool weightShapeEqual = ((*gammaShape) == (*betaShape));
     OP_CHECK_IF(!(elewiseShapeEqual && weightShapeEqual),
-                OP_LOGW(this->context_->GetNodeName(),
-                        "Got x1/x2/y1/x shape not equal OR gamma/beta Shape not equal, tiling FAILED."),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "x1, x2, y1, x, gamma, beta",
+                    Ops::Base::ToString(
+                        std::vector<const gert::Shape*>{&x1Shape->GetStorageShape(), &x2Shape->GetStorageShape(),
+                                                        &y1Shape->GetStorageShape(), &xShape->GetStorageShape(),
+                                                        &gammaShape->GetStorageShape(), &betaShape->GetStorageShape()})
+                        .c_str(),
+                    "x1, x2, y1 and x must have equal shapes; gamma and beta must have equal shapes"),
                 return ge::GRAPH_FAILED);
 
     // calculate the number of valid rows.
@@ -154,7 +175,7 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetShapeAttrsInfo()
 
     // check inputs shape
     if (CheckInputsShape() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Inputs shape invalid.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Inputs shape invalid.");
         return ge::GRAPH_FAILED;
     }
 

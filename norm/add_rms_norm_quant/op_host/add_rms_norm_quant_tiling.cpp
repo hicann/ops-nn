@@ -14,6 +14,7 @@
  */
 #include <iostream>
 #include <limits>
+#include "../../norm_common/op_host/norm_error_report.h"
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_quant_tiling.h"
 
@@ -168,9 +169,11 @@ ge::graphStatus GetOpDescInfo(gert::TilingContext* context, uint32_t& numCol, ui
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         numRowTmp *= static_cast<uint64_t>(xShape.GetDim(i));
     }
-    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
-                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(xShape).c_str(),
+                                              "The outer and reduction dimension products must fit in uint32_t"),
+        return ge::GRAPH_FAILED);
     numCol = static_cast<uint32_t>(numColTmp);
     numRow = static_cast<uint32_t>(numRowTmp);
     float avgFactor = (numCol == INT_ZERO) ? 0.0f : 1.0f / static_cast<float>(numCol);
@@ -263,7 +266,7 @@ static ge::graphStatus Tiling4AddRmsNormQuantNotRegbase(gert::TilingContext* con
     uint32_t numCol;
     uint32_t numRow;
     OP_CHECK_IF(GetOpDescInfo(context, numCol, numRow) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Get Opdesc Info failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "Get Opdesc Info failed."), return ge::GRAPH_FAILED);
 
     uint32_t blockFactor = 1;
     uint32_t tileNum = Ops::Base::CeilDiv(numRow, numCore * blockFactor);
@@ -399,8 +402,14 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
     OP_CHECK_IF((err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
-                OP_LOGE(context, "Len of simplifiedKey exceeds max length."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(), "The generated simplifiedKey exceeds the internal max length: actual length=" +
+                                        std::to_string(strlen(simplifiedKey)) +
+                                        ", max length=" + std::to_string(MAX_LEN_SIMPLIFIED_KEY) +
+                                        "; internal simplified key generation overlength, not a user parameter error."),
+        return ge::GRAPH_FAILED);
     OP_LOGW(context, "Finish AddRmsNormQuant genSimplifiedKey.");
     return ge::GRAPH_SUCCESS;
 }

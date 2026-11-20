@@ -18,6 +18,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "ut_op_util.h"
 #include "platform/platform_infos_def.h"
 #include "kernel_run_context_facker.h"
@@ -102,8 +103,10 @@ static void ExecuteTestCase(gert::StorageShape input_shape, gert::StorageShape g
                             gert::StorageShape out_shape, gert::StorageShape reduce_shape, int num_inputs,
                             ge::DataType input_dtype, ge::DataType output_dtype, std::vector<bool> output_mask,
                             int64_t dst_type, int expected_tiling_key, float epsilon = 0.01f,
-                            ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS, int invalidSmooth = 0)
 {
+    gert::StorageShape smooth1 = invalidSmooth == 1 ? gert::StorageShape({5}, {5}) : gamma_shape;
+    gert::StorageShape smooth2 = invalidSmooth == 2 ? gert::StorageShape({5}, {5}) : gamma_shape;
     string compile_info_string = R"({
  "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                    "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -186,7 +189,7 @@ static void ExecuteTestCase(gert::StorageShape input_shape, gert::StorageShape g
                 .SetOpType(op_type)
                 .NodeIoNum(5, 5)
                 .IrInstanceNum({1, 1, 1, 1, 1})
-                .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
+                .InputShapes({&input_shape, &input_shape, &gamma_shape, &smooth1, &smooth2})
                 .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
                 .CompileInfo(&compile_info)
                 .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -521,4 +524,27 @@ TEST_F(AddRmsNormDynamicQuantTilingArch35, add_rms_norm_dynamic_quant_tiling_reg
 
     ExecuteTestCase(input_shape, gamma_shape, out_shape, reduce_shape, 6, ge::DT_FLOAT16, ge::DT_INT8, {true, true}, 2,
                     0);
+}
+
+TEST_F(AddRmsNormDynamicQuantTilingArch35, OutputAndSmoothShapeErrorsReportOnce)
+{
+    for (int errorCase = 0; errorCase < 3; ++errorCase) {
+        SCOPED_TRACE(errorCase);
+        gert::StorageShape x({2, 4}, {2, 4});
+        gert::StorageShape gamma({4}, {4});
+        gert::StorageShape output = errorCase == 0 ? gert::StorageShape({2, 5}, {2, 5}) : x;
+        gert::StorageShape reduce({2}, {2});
+        auto& manager = ErrorManager::GetInstance();
+        ASSERT_EQ(manager.Init(), 0);
+        manager.GetRawErrorMessages();
+        ExecuteTestCase(x, gamma, output, reduce, 5, ge::DT_FLOAT16, ge::DT_INT8, {true, true}, 2, 0, 1e-6f,
+                        ge::GRAPH_FAILED, errorCase);
+        const auto errors = manager.GetRawErrorMessages();
+        ASSERT_EQ(errors.size(), 1U);
+        EXPECT_EQ(errors[0].error_id, "EZ0010");
+        if (errorCase != 0) {
+            EXPECT_EQ(errors[0].args_map.at("param_names"),
+                      errorCase == 1 ? "gamma, smooth_scale1" : "gamma, smooth_scale2");
+        }
+    }
 }

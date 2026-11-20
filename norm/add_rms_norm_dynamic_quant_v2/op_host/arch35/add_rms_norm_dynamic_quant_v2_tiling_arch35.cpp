@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "../../../norm_common/op_host/norm_error_report.h"
 #include "op_host/tiling_util.h"
 #include "op_api/runtime2_util_nn.h"
 #include "add_rms_norm_dynamic_quant_v2_tiling_arch35.h"
@@ -46,7 +47,10 @@ static ge::graphStatus Tiling4AddRmsNormDynamicQuantV2(gert::TilingContext* cont
                     return ge::GRAPH_FAILED);
     OP_LOGI(context->GetNodeName(), "Enter Tiling4AddRmsNormDynamicQuantV2");
     auto colShape = context->GetInputShape(GAMMA_IDX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, colShape);
+    if (colShape == nullptr) {
+        Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Get gamma input shape nullptr, tiling failed");
+        return ge::GRAPH_FAILED;
+    }
     auto colStorageShape = optiling::EnsureNotScalar(colShape->GetStorageShape());
     uint32_t colVal = colStorageShape.GetDim(0);
     if (colVal == 0) {

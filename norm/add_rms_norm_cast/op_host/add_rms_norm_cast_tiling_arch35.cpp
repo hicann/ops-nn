@@ -53,8 +53,16 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::CheckDtypeVaild(ge::DataType& srcDt
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-            Ops::Base::ToString(srcDtype).c_str());
+    std::string supportedDtypes;
+    for (const auto& supportedDtype : supportDtypeList) {
+        if (!supportedDtypes.empty()) {
+            supportedDtypes.append(", ");
+        }
+        supportedDtypes.append(Ops::Base::ToString(supportedDtype));
+    }
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+        nodeName.c_str(), srcName, Ops::Base::ToString(srcDtype),
+        "The dtype of " + srcName + " is not in the supported dtype list; supported dtypes are " + supportedDtypes);
     return ge::GRAPH_FAILED;
 }
 
@@ -218,11 +226,13 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::GetShapeAttrsInfo()
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormCastRegbaseTiling GetShapeAttrsInfo.");
     OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."),
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input shape dim is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
+    OP_CHECK_IF(!CheckInputShapeValue(),
+                OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input shape relationship is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

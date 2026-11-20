@@ -17,6 +17,7 @@
 #include <vector>
 #include "op_host/tiling_util.h"
 #include "add_layer_norm_tiling.h"
+#include "norm/norm_common/op_host/norm_error_report.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -441,7 +442,8 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
     const gert::StorageShape* rstdShape = context->GetOutputShape(OUTPUT_RSTD_INDEX);
     const gert::StorageShape* xShape = context->GetOutputShape(OUTPUT_X_INDEX);
     OP_CHECK_IF(!CheckNotNullAll({x1Shape, x2Shape, gammaShape, betaShape, yShape, meanShape, rstdShape, xShape}),
-                OP_LOGE("CheckAddLn", "In/Out have Null."), return false);
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Missing input or output shape metadata"),
+                return false);
     size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
@@ -454,7 +456,8 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             x2DimNum, gammaDimNum, betaDimNum);
     OP_LOGI("CheckAddLn", "y DimNum = %zu, mean DimNum = %zu, rstd DimNum = %zu, x DimNum = %zu.", yDimNum, meanDimNum,
             rstdDimNum, xDimNum);
-    OP_CHECK_IF(!CheckDimLimit(x1DimNum, gammaDimNum), OP_LOGE("CheckAddLn", "Bad Input DimNum."), return false);
+    OP_CHECK_IF(!CheckDimLimit(x1DimNum, gammaDimNum), OP_LOGE_WITHOUT_REPORT("CheckAddLn", "Bad Input DimNum."),
+                return false);
     OP_CHECK_IF(
         !CheckEqualsAll<size_t>({x1DimNum, x2DimNum, yDimNum, xDimNum, meanDimNum, rstdDimNum}),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
@@ -505,7 +508,7 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
                                                        "The shapes of mean and rstd should be the same"),
                 return false);
     OP_CHECK_IF(!CheckX1GammaMean(x1Shape, gammaShape, meanShape, x1DimNum, gammaDimNum),
-                OP_LOGE("CheckAddLn", "Shape x1/gamma/mean check failed."), return false);
+                OP_LOGE_WITHOUT_REPORT("CheckAddLn", "Shape x1/gamma/mean check failed."), return false);
     bool x1ShapeEmpty = !HasNoZero(x1Shape, x1DimNum);
     bool gammaShapeEmpty = !HasNoZero(gammaShape, gammaDimNum);
     bool meanShapeEmpty = !HasNoZero(meanShape, meanDimNum);
@@ -537,19 +540,25 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
 
 static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
 {
-    OP_CHECK_IF(!CheckInputShape4AddLayerNorm(context), OP_LOGE(context, "Input shape invalid."),
+    OP_CHECK_IF(!CheckInputShape4AddLayerNorm(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid."),
                 return ge::GRAPH_FAILED);
     AddLayerNormTilingData tiling;
     auto attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Missing attributes metadata"),
+                return ge::GRAPH_FAILED);
 
     const float* epsPtr = attrs->GetFloat(0);
-    OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == epsPtr,
+                Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Missing required epsilon attribute"),
+                return ge::GRAPH_FAILED);
     float eps = *epsPtr;
 
     const bool* enableAdditionalOutputPtr = attrs->GetBool(1);
-    OP_CHECK_IF(nullptr == enableAdditionalOutputPtr,
-                OP_LOGE(context, "Get required attr enableAdditionalOutputPtr failed. "), return false);
+    OP_CHECK_IF(
+        nullptr == enableAdditionalOutputPtr,
+        Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Missing required additional_output attribute"),
+        return ge::GRAPH_FAILED);
     auto enableAdditionalOutput = *enableAdditionalOutputPtr;
     tiling.set_eps(eps);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());

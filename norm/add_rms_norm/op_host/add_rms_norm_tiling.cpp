@@ -17,6 +17,7 @@
 #include <limits>
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_tiling.h"
+#include "../../norm_common/op_host/norm_error_report.h"
 
 namespace optiling {
 constexpr uint32_t RMS_NORM_KEY = 0;
@@ -115,23 +116,21 @@ static bool CheckNullptr(const gert::TilingContext* context)
     const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
     const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
+    OP_CHECK_IF(
+        x1_shape == nullptr || x2_shape == nullptr || gamma_shape == nullptr || y_shape == nullptr ||
+            rstd_shape == nullptr || x_shape == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(
+            context->GetNodeName(), std::string("Missing shape metadata:") + (x1_shape == nullptr ? " x1" : "") +
+                                        (x2_shape == nullptr ? " x2" : "") + (gamma_shape == nullptr ? " gamma" : "") +
+                                        (y_shape == nullptr ? " y" : "") + (rstd_shape == nullptr ? " rstd" : "") +
+                                        (x_shape == nullptr ? " x" : "")),
+        return false);
+
     norm_key = RMS_NORM_KEY;
     if (rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0) {
         norm_key = POST_RMS_NORM;
     } else if (rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() > 0) {
         norm_key = PRE_RMS_NORM;
-    }
-
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1_shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x2_shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gamma_shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
-
-    if (norm_key == RMS_NORM_KEY) {
-        OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape);
-        OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
-    } else if (norm_key == PRE_RMS_NORM) {
-        OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
     }
     return true;
 }
@@ -282,7 +281,7 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
         return false;
     }
 
-    OP_CHECK_IF(!CheckInputOutputDim(context), OP_LOGE(context, "Input Dim invalid."), return false);
+    OP_CHECK_IF(!CheckInputOutputDim(context), OP_LOGE_WITHOUT_REPORT(context, "Input Dim invalid."), return false);
     const gert::StorageShape* x1_shape = context->GetInputShape(RMS_INPUT_X1_INDEX);
     const gert::StorageShape* x2_shape = context->GetInputShape(RMS_INPUT_X2_INDEX);
     const gert::StorageShape* gamma_shape = context->GetInputShape(RMS_INPUT_GAMMA_INDEX);
@@ -384,9 +383,11 @@ static ge::graphStatus CalculateRowAndColParameters(gert::TilingContext* context
     for (size_t i = 0; i < x1DimNum - gammaDimNum; ++i) {
         numRowTmp *= static_cast<uint64_t>(x1_shape.GetDim(i));
     }
-    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
-                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(x1_shape).c_str(),
+                                              "The outer and reduction dimension products must fit in uint32_t"),
+        return ge::GRAPH_FAILED);
     numRow = static_cast<uint32_t>(numRowTmp);
     numCol = static_cast<uint32_t>(numColTmp);
     return ge::GRAPH_SUCCESS;
@@ -530,8 +531,10 @@ static void LogTilingResults(gert::TilingContext* context, AddRMSNormTilingData*
 static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
 {
     OP_LOGI("Tiling4AddRmsNorm", "Enter Tiling4AddRmsNorm");
-    OP_CHECK_IF(!CheckNullptr(context), OP_LOGE(context, "Input shape invalid (nullptr)."), return false);
-    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckNullptr(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid (nullptr)."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid."),
+                return ge::GRAPH_FAILED);
 
     AddRMSNormTilingData tiling;
     uint32_t num_core;
@@ -550,7 +553,7 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     uint32_t num_row;
     uint32_t num_col;
     OP_CHECK_IF(CalculateRowAndColParameters(context, num_row, num_col) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Calculate row and col parameters failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "Calculate row and col parameters failed."), return ge::GRAPH_FAILED);
 
     float epsilon = 0;
     GetEpsilonParameter(context, epsilon);

@@ -11,6 +11,7 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
@@ -2075,10 +2076,12 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_001)
     // dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
+static void CheckLegacyShapeErrorReportsOnce(bool invalidRank, int regbaseCase = 0, int metadataCase = 0)
 {
     // dlog_setlevel(0, 0, 0);
-    gert::StorageShape input_shape = {{24, 1, 2560}, {24, 1, 2560}};
+    gert::StorageShape input_shape = invalidRank ? gert::StorageShape({1, 1, 1, 1, 1, 1, 1, 1, 2560},
+                                                                      {1, 1, 1, 1, 1, 1, 1, 1, 2560}) :
+                                                   gert::StorageShape({24, 1, 2560}, {24, 1, 2560});
     gert::StorageShape gamma_shape = {{
                                           2000,
                                       },
@@ -2087,6 +2090,18 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
                                       }};
     gert::StorageShape out_shape = {{24, 1, 2560}, {24, 1, 2560}};
     gert::StorageShape rstd_shape = {{24, 1, 1}, {24, 1, 1}};
+
+    if (regbaseCase != 0 || metadataCase != 0) {
+        input_shape = regbaseCase == 1 ? gert::StorageShape({1, 1, 1, 1, 1, 1, 1, 1, 4}, {1, 1, 1, 1, 1, 1, 1, 1, 4}) :
+                                         gert::StorageShape({2, 4}, {2, 4});
+        gamma_shape = regbaseCase == 2 ? gert::StorageShape({1, 2, 4}, {1, 2, 4}) :
+                      regbaseCase == 3 ? gert::StorageShape({3}, {3}) :
+                                         gert::StorageShape({4}, {4});
+        out_shape = input_shape;
+        rstd_shape = regbaseCase == 4 ? gert::StorageShape({2}, {2}) :
+                     regbaseCase == 5 ? gert::StorageShape({2, 2}, {2, 2}) :
+                                        gert::StorageShape({2, 1}, {2, 1});
+    }
 
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -2134,6 +2149,10 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
 
+    if (regbaseCase != 0) {
+        std::map<std::string, std::string> version = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+        platform_info.SetPlatformRes("version", version);
+    }
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -2141,10 +2160,18 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
+    std::vector<std::pair<std::string, Ops::NN::AnyValue>> attributes;
+    if (metadataCase != 3) {
+        attributes.emplace_back("epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01));
+    }
+    if (metadataCase != 2 && metadataCase != 3) {
+        attributes.emplace_back("additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false));
+    }
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 4)
                       .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape})
+                      .InputShapes(
+                          {metadataCase == 1 ? nullptr : &input_shape, &input_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape, &rstd_shape, &rstd_shape, &out_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2156,8 +2183,7 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                  {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs(attributes)
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2169,10 +2195,65 @@ TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    // workspaces nullptr return failed
+    if (metadataCase == 1) {
+        auto* kernel = holder.GetContext<gert::KernelContext>();
+        ASSERT_NE(kernel->MutableInput(0), nullptr);
+        kernel->MutableInput(0)->Set(nullptr, nullptr);
+        ASSERT_EQ(tiling_context->GetInputShape(0), nullptr);
+    }
+    auto& manager = ErrorManager::GetInstance();
+    ASSERT_EQ(manager.Init(), 0);
+    manager.GetRawErrorMessages();
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    const auto errors = manager.GetRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    if (metadataCase != 0) {
+        EXPECT_EQ(errors[0].error_id, "EZ1008");
+        const auto& reason = errors[0].args_map.at("reason");
+        EXPECT_NE(reason.find(metadataCase == 1 ? "shape metadata" :
+                              metadataCase == 2 ? "additional_output" :
+                                                  "epsilon"),
+                  std::string::npos);
+        return;
+    }
+    if (regbaseCase != 0) {
+        const char* expectedCode = regbaseCase == 1                       ? "EZ0011" :
+                                   (regbaseCase == 2 || regbaseCase == 4) ? "EZ0013" :
+                                                                            "EZ0010";
+        EXPECT_EQ(errors[0].error_id, expectedCode);
+        return;
+    }
+    EXPECT_EQ(errors[0].error_id, invalidRank ? "EZ0011" : "EZ0010");
+    if (invalidRank) {
+        EXPECT_EQ(errors[0].args_map.at("param_name"), "x1");
+        EXPECT_EQ(errors[0].args_map.at("incorrect_dim"), "9");
+    } else {
+        EXPECT_EQ(errors[0].args_map.at("param_names"), "gamma and x1");
+        EXPECT_EQ(errors[0].args_map.at("incorrect_shapes"), "[2000] and [24, 1, 2560]");
+    }
     // dlog_setlevel(0, 3, 0);
 }
+
+TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_002) { CheckLegacyShapeErrorReportsOnce(false); }
+
+TEST_F(AddLayerNormTiling, LegacyRankErrorReportsOnce) { CheckLegacyShapeErrorReportsOnce(true); }
+
+TEST_F(AddLayerNormTiling, RegbaseShapeErrorsReportOnce)
+{
+    for (int shapeCase = 1; shapeCase <= 5; ++shapeCase) {
+        SCOPED_TRACE(shapeCase);
+        CheckLegacyShapeErrorReportsOnce(false, shapeCase);
+    }
+}
+
+TEST_F(AddLayerNormTiling, LegacyMissingShapeReportsFailureOnce) { CheckLegacyShapeErrorReportsOnce(false, 0, 1); }
+
+TEST_F(AddLayerNormTiling, LegacyMissingAdditionalOutputReturnsFailureOnce)
+{
+    CheckLegacyShapeErrorReportsOnce(false, 0, 2);
+}
+
+TEST_F(AddLayerNormTiling, LegacyMissingEpsilonReportsFailureOnce) { CheckLegacyShapeErrorReportsOnce(false, 0, 3); }
 
 TEST_F(AddLayerNormTiling, add_layer_norm_tiling_error_shape_003)
 {

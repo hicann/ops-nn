@@ -13,6 +13,7 @@
  */
 #include "../add_rms_norm_hi_f4_quant_tiling.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
+#include "norm/norm_common/op_host/norm_error_report.h"
 #include "../../../../../common/inc/op_host/op_const_def_nn.h"
 
 namespace optiling {
@@ -26,7 +27,11 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckShapeNull()
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
 
     OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape),
-                OP_LOGE(context_->GetNodeName(), "Input shape is nullptr, please check."), return ge::GRAPH_FAILED);
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(), std::string("CheckShapeNull: missing input shape metadata:") +
+                                                 (x1Shape == nullptr ? " x1" : "") + (x2Shape == nullptr ? " x2" : "") +
+                                                 (gammaShape == nullptr ? " gamma" : "")),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -52,16 +57,18 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckInputShapeDim()
 
     size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF((x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT) || (x1DimNum < 1) || (x2DimNum < 1),
-                OP_LOGE(context_->GetNodeName(),
-                        "Input x1/x2 dim should be greater than 0,"
-                        "and not bigger than %u.",
-                        MAX_DIM_CNT),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT) || (x1DimNum < 1) || (x2DimNum < 1),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x1, x2", (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum)).c_str(),
+            ("Ranks must be in [1, " + std::to_string(MAX_DIM_CNT) + "]").c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"),
-                OP_LOGE(context_->GetNodeName(), "Input x1 shape is invalid, please check."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input x1 shape is invalid, please check."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"),
-                OP_LOGE(context_->GetNodeName(), "Input x2 shape is invalid, please check."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input x2 shape is invalid, please check."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -71,30 +78,42 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckInputShapeValue()
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
     const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
     const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaShape);
+    OP_CHECK_IF(x1Shape == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: x1Shape"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x2Shape == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: x2Shape"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        gammaShape == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: gammaShape"),
+        return ge::GRAPH_FAILED);
 
     if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
-        OP_LOGE(context_->GetNodeName(), "Input x1 shape is not same with x2 shape.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input x1 shape is not same with x2 shape.");
         return ge::GRAPH_FAILED;
     }
 
     if (1 != gammaShape->GetStorageShape().GetDimNum()) {
-        OP_LOGE(context_->GetNodeName(), "The shape dim of gamma/beta only support 1, please check.");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "gamma",
+                                                 std::to_string(gammaShape->GetStorageShape().GetDimNum()).c_str(),
+                                                 "Rank must be 1");
         return ge::GRAPH_FAILED;
     }
 
     if (!NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true)) {
-        OP_LOGE(context_->GetNodeName(), "Input gamma shape value is not valid with x shape value.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input gamma shape value is not valid with x shape value.");
         return ge::GRAPH_FAILED;
     }
 
     if (betaFlag_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, betaShape);
+        OP_CHECK_IF(
+            betaShape == nullptr,
+            Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: betaShape"),
+            return ge::GRAPH_FAILED);
         if (!NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
-            OP_LOGE(context_->GetNodeName(), "Input beta shape is not same with gamma shape.");
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input beta shape is not same with gamma shape.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -107,29 +126,49 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckInputDtype()
     std::set<ge::DataType> supportedXDtypes = {Ops::NN::DT_FLOAT16, Ops::NN::DT_BF16};
     std::set<ge::DataType> supportedGammaDtypes = {Ops::NN::DT_FLOAT16, Ops::NN::DT_BF16, Ops::NN::DT_FLOAT};
 
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X1_INDEX));
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X2_INDEX));
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(GAMMA_INDEX));
+    OP_CHECK_IF(context_->GetInputTensor(X1_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(), "Missing tiling context object: context_->GetInputTensor(X1_INDEX)"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->GetInputTensor(X2_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(), "Missing tiling context object: context_->GetInputTensor(X2_INDEX)"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->GetInputTensor(GAMMA_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(), "Missing tiling context object: context_->GetInputTensor(GAMMA_INDEX)"),
+                return ge::GRAPH_FAILED);
     ge::DataType x1Dtype = context_->GetInputTensor(X1_INDEX)->GetDataType();
     ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX)->GetDataType();
     ge::DataType gammaDtype = context_->GetInputTensor(GAMMA_INDEX)->GetDataType();
 
     if (x1Dtype != x2Dtype) {
-        OP_LOGE(context_->GetNodeName(), "Input x1/x2 dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x1, x2",
+            (std::to_string(static_cast<int>(x1Dtype)) + ", " + std::to_string(static_cast<int>(x2Dtype))).c_str(),
+            "Input x1 and x2 dtypes must be equal");
         return ge::GRAPH_FAILED;
     }
     if (supportedXDtypes.count(x1Dtype) == 0) {
-        OP_LOGE(context_->GetNodeName(), "Input x1/x2 dtype should be float16 or bfloat16.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x1",
+                                              std::to_string(static_cast<int>(x1Dtype)).c_str(),
+                                              "Supported dtypes are float16 and bfloat16");
         return ge::GRAPH_FAILED;
     }
     if (supportedGammaDtypes.count(gammaDtype) == 0) {
-        OP_LOGE(context_->GetNodeName(), "Input gamma dtype should be float16, bfloat16 or float32.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma",
+                                              std::to_string(static_cast<int>(gammaDtype)).c_str(),
+                                              "Supported dtypes are float16, bfloat16 and float32");
         return ge::GRAPH_FAILED;
     }
     if (betaFlag_) {
         ge::DataType betaDtype = context_->GetInputTensor(BETA_INDEX)->GetDataType();
         if (gammaDtype != betaDtype) {
-            OP_LOGE(context_->GetNodeName(), "Input gamma/beta dtype should be equal.");
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "gamma, beta",
+                (std::to_string(static_cast<int>(gammaDtype)) + ", " + std::to_string(static_cast<int>(betaDtype)))
+                    .c_str(),
+                "Input gamma and beta dtypes must be equal");
             return ge::GRAPH_FAILED;
         }
     }
@@ -145,29 +184,47 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckInputDtype()
 ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckOutputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter CheckOutputDtype.");
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(Y_INDEX));
+    OP_CHECK_IF(context_->GetOutputDesc(Y_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(),
+                                                    "Missing tiling context object: context_->GetOutputDesc(Y_INDEX)"),
+                return ge::GRAPH_FAILED);
     ge::DataType yDtype = context_->GetOutputDesc(Y_INDEX)->GetDataType();
     if (yDtype != Ops::NN::DT_HIFLOAT4) {
-        OP_LOGE(context_->GetNodeName(), "Output y dtype should be HIFLOAT4.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y",
+                                              std::to_string(static_cast<int>(yDtype)).c_str(),
+                                              "Output y dtype must be HIFLOAT4");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(X_INDEX));
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(SCALE_INDEX));
+    OP_CHECK_IF(context_->GetOutputDesc(X_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(),
+                                                    "Missing tiling context object: context_->GetOutputDesc(X_INDEX)"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->GetOutputDesc(SCALE_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(), "Missing tiling context object: context_->GetOutputDesc(SCALE_INDEX)"),
+                return ge::GRAPH_FAILED);
     ge::DataType outputXDtype = context_->GetOutputDesc(X_INDEX)->GetDataType();
     ge::DataType scaleDtype = context_->GetOutputDesc(SCALE_INDEX)->GetDataType();
     if (outputXDtype != xDtype_) {
-        OP_LOGE(context_->GetNodeName(), "Output X dtype should be equal to input X1/X2 dtype.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, x1",
+            (std::to_string(static_cast<int>(outputXDtype)) + ", " + std::to_string(static_cast<int>(xDtype_))).c_str(),
+            "Output x dtype must equal the input dtype");
         return ge::GRAPH_FAILED;
     }
     if (scaleDtype != Ops::NN::DT_HIFLOAT4_SCALE) {
-        OP_LOGE(context_->GetNodeName(), "Output scale dtype should be HIFLOAT4_SCALE.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scale",
+                                              std::to_string(static_cast<int>(scaleDtype)).c_str(),
+                                              "Output scale dtype must be HIFLOAT4_SCALE");
         return ge::GRAPH_FAILED;
     }
 
     rstdFlag_ = 0;
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: attrs"),
+                return ge::GRAPH_FAILED);
     const bool* outputRstdPtr = attrs->GetAttrPointer<bool>(OUTPUT_RSTD_ATTR_INDEX);
     if (outputRstdPtr != nullptr) {
         bool outputRstd = *outputRstdPtr;
@@ -177,10 +234,15 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckOutputDtype()
     }
 
     if (rstdFlag_) {
-        OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(RSTD_INDEX));
+        OP_CHECK_IF(context_->GetOutputDesc(RSTD_INDEX) == nullptr,
+                    Ops::NN::ErrorReport::TilingFailure(
+                        context_->GetNodeName(), "Missing tiling context object: context_->GetOutputDesc(RSTD_INDEX)"),
+                    return ge::GRAPH_FAILED);
         ge::DataType rstdDtype = context_->GetOutputDesc(RSTD_INDEX)->GetDataType();
         if (rstdDtype != Ops::NN::DT_FLOAT) {
-            OP_LOGE(context_->GetNodeName(), "Output rstd dtype should be FLOAT32.");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "rstd",
+                                                  std::to_string(static_cast<int>(rstdDtype)).c_str(),
+                                                  "Output rstd dtype must be float32");
             return ge::GRAPH_FAILED;
         }
     }
@@ -193,7 +255,10 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckOutputShapeValue()
 
     const gert::StorageShape* x1ShapePtr = context_->GetInputShape(X1_INDEX);
     const gert::StorageShape* scaleShapePtr = context_->GetOutputShape(SCALE_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, scaleShapePtr);
+    OP_CHECK_IF(
+        scaleShapePtr == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: scaleShapePtr"),
+        return ge::GRAPH_FAILED);
 
     const gert::Shape x1Shape = x1ShapePtr->GetStorageShape();
     const gert::Shape scaleShape = scaleShapePtr->GetStorageShape();
@@ -203,48 +268,65 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckOutputShapeValue()
     size_t gammaRank = gammaShape.GetDimNum();
 
     if (scaleRank != xRank + 1) {
-        OP_LOGE(context_->GetNodeName(), "Output scale rank [%zu] should be xRank+1 [%zu].", scaleRank, xRank + 1);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "scale, x1",
+                                                  (std::to_string(scaleRank) + ", " + std::to_string(xRank)).c_str(),
+                                                  "Output scale rank must equal input rank plus 1");
         return ge::GRAPH_FAILED;
     }
 
     for (size_t i = 0; i < xRank - gammaRank; i++) {
         if (scaleShape.GetDim(i) != x1Shape.GetDim(i)) {
-            OP_LOGE(context_->GetNodeName(), "scale shape dim[%zu]=%ld should match x1 shape dim[%zu]=%ld.", i,
-                    scaleShape.GetDim(i), i, x1Shape.GetDim(i));
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "scale", Ops::Base::ToString(scaleShape).c_str(),
+                ("Dimension " + std::to_string(i) + " must equal x1 dimension " + std::to_string(x1Shape.GetDim(i)))
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
 
     uint64_t expectedLastDim = Ops::Base::CeilDiv(numCol_, static_cast<uint64_t>(HIF4_BLOCK_SIZE));
     if (scaleShape.GetDim(scaleRank - NUM_TWO) != static_cast<int64_t>(expectedLastDim)) {
-        OP_LOGE(context_->GetNodeName(), "scale dim[%zu]=%ld should be CeilDiv(R=%ld, 64) = %ld.", scaleRank - NUM_TWO,
-                scaleShape.GetDim(scaleRank - NUM_TWO), static_cast<int64_t>(numCol_),
-                static_cast<int64_t>(expectedLastDim));
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "scale", Ops::Base::ToString(scaleShape).c_str(),
+            ("Penultimate dimension must equal ceil(input last dimension / 64) = " + std::to_string(expectedLastDim))
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
     if (scaleShape.GetDim(scaleRank - 1) != 1) {
-        OP_LOGE(context_->GetNodeName(), "scale last dim should be 1, got %ld.", scaleShape.GetDim(scaleRank - 1));
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "scale", Ops::Base::ToString(scaleShape).c_str(),
+                                              "Last dimension must be 1");
         return ge::GRAPH_FAILED;
     }
 
     if (rstdFlag_) {
         const gert::StorageShape* rstdShapePtr = context_->GetOutputShape(RSTD_INDEX);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, rstdShapePtr);
+        OP_CHECK_IF(
+            rstdShapePtr == nullptr,
+            Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: rstdShapePtr"),
+            return ge::GRAPH_FAILED);
         const gert::Shape rstdShape = rstdShapePtr->GetStorageShape();
         OP_CHECK_IF((rstdShape.GetDimNum() != xRank),
-                    OP_LOGE(context_->GetNodeName(), "Invalid rstd shape dim num (must same with input x1)."),
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        context_->GetNodeName(), "rstd, x1",
+                        (std::to_string(rstdShape.GetDimNum()) + ", " + std::to_string(xRank)).c_str(),
+                        "Output rstd rank must equal input rank"),
                     return ge::GRAPH_FAILED);
         for (size_t i = 0; i < xRank; i++) {
             if (i >= xRank - gammaRank) {
                 if (rstdShape.GetDim(i) != 1) {
-                    OP_LOGE(context_->GetNodeName(), "rstd shape dim[%zu]=%ld should be 1.", i, rstdShape.GetDim(i));
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd",
+                                                          Ops::Base::ToString(rstdShape).c_str(),
+                                                          ("Dimension " + std::to_string(i) + " must be 1").c_str());
                     return ge::GRAPH_FAILED;
                 }
             } else {
                 if (rstdShape.GetDim(i) != x1Shape.GetDim(i)) {
-                    OP_LOGE(context_->GetNodeName(), "rstd shape dim[%zu]=%ld should match x1 shape dim[%zu]=%ld.", i,
-                            rstdShape.GetDim(i), i, x1Shape.GetDim(i));
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(),
+                        ("Dimension " + std::to_string(i) + " must equal x1 dimension " +
+                         std::to_string(x1Shape.GetDim(i)))
+                            .c_str());
                     return ge::GRAPH_FAILED;
                 }
             }
@@ -253,25 +335,29 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::CheckOutputShapeValue()
 
     const gert::StorageShape* outputXShape = context_->GetOutputShape(X_INDEX);
     const gert::StorageShape* outputYShape = context_->GetOutputShape(Y_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputXShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, outputYShape);
+    OP_CHECK_IF(
+        outputXShape == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: outputXShape"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        outputYShape == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: outputYShape"),
+        return ge::GRAPH_FAILED);
 
     if (!NormCheck::CheckShapeSame(x1ShapePtr, outputXShape, nodeName, "inputX1", "outputX")) {
-        OP_LOGE(context_->GetNodeName(), "Output X shape is not same with inputX1 shape.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Output X shape is not same with inputX1 shape.");
         return ge::GRAPH_FAILED;
     }
 
     if (!NormCheck::CheckShapeSame(x1ShapePtr, outputYShape, nodeName, "inputX1", "outputY")) {
-        OP_LOGE(context_->GetNodeName(), "Output Y shape is not same with inputX1 shape.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Output Y shape is not same with inputX1 shape.");
         return ge::GRAPH_FAILED;
     }
 
     size_t lastDim = x1Shape.GetDimNum() - 1;
     if (x1Shape.GetDim(lastDim) % NUM_TWO != 0) {
-        OP_LOGE(context_->GetNodeName(),
-                "Output y data type is FLOAT4_E1M2, "
-                "the last axis of x should be even, but got %ld.",
-                x1Shape.GetDim(lastDim));
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(x1Shape).c_str(),
+                                              "Last input dimension must be even for packed HiF4 output");
         return ge::GRAPH_FAILED;
     }
 
@@ -300,7 +386,9 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::SetInputParams()
     numColAlign_ = Ops::Base::CeilAlign(numCol_, COL_ALIGN_NUM);
 
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: attrs"),
+                return ge::GRAPH_FAILED);
 
     const float* epsilonPtr = attrs->GetFloat(EPS_ATTR_INDEX);
     if (epsilonPtr != nullptr) {
@@ -313,7 +401,8 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::SetInputParams()
         scaleAlg_ = *scaleAlgPtr;
     }
     if (scaleAlg_ != 0 && scaleAlg_ != 1) {
-        OP_LOGE(context_->GetNodeName(), "scale_alg should be 0 or 1, but got %ld.", scaleAlg_);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(),
+                                              "Supported values are 0 and 1");
         return ge::GRAPH_FAILED;
     }
 
@@ -329,9 +418,8 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::SetInputParams()
 
     OP_CHECK_IF(
         (numCol_ % HIF4_BLOCK_SIZE != 0),
-        OP_LOGE(context_->GetNodeName(),
-                "HiF4 quantization requires the last axis size to be a multiple of 64, but got %lu, please check.",
-                numCol_),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(x1Shape).c_str(),
+                                              "Last dimension must be a multiple of 64 for HiF4 quantization"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -340,33 +428,42 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::SetInputParams()
 ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter GetShapeAttrsInfo.");
+    OP_CHECK_IF(
+        context_->GetPlatformInfo() == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing platform metadata for vector resources"),
+        return ge::GRAPH_FAILED);
     uint64_t vecLength = Ops::Base::GetVRegSize(context_);
     OP_CHECK_IF((vecLength <= 0),
-                OP_LOGE(context_, "Get vector Length failed, vector Length: %u", static_cast<uint32_t>(vecLength)),
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(),
+                    "GetShapeAttrsInfo: vecLength must be positive, actual=" + std::to_string(vecLength)),
                 return ge::GRAPH_FAILED);
     vecLengthFP32_ = vecLength / FP32_SIZE;
     ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
     OP_CHECK_IF((ubBlockSize_ <= 0),
-                OP_LOGE(context_, "Get block Size failed, block size: %u", static_cast<uint32_t>(ubBlockSize_)),
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(),
+                    "GetShapeAttrsInfo: ubBlockSize_ must be positive, actual=" + std::to_string(ubBlockSize_)),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckShapeNull() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Required input is null."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShapeNull() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Required input is null."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckOptionalInput() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "Optional input check failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputShapeDim() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Input shape dim invalid."),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Optional input check failed."),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShapeDim() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input shape dim invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckInputShapeValue() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "Input shape value invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Input dtype invalid."),
-                return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input shape value invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input dtype invalid."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckOutputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Output dtype invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(SetInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "SetInputParams failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckOutputShapeValue() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Output shape invalid."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckOutputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Output dtype invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetInputParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "SetInputParams failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckOutputShapeValue() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Output shape invalid."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -380,7 +477,10 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::GetPlatformInfo()
         totalCoreNum_ = compileInfoPtr->totalCoreNum;
         maxUbSize_ = compileInfoPtr->totalUbSize;
     } else {
-        OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
+        OP_CHECK_IF(
+            platformInfo == nullptr,
+            Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: platformInfo"),
+            return ge::GRAPH_FAILED);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         totalCoreNum_ = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
@@ -393,7 +493,10 @@ ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::GetPlatformInfo()
 ge::graphStatus AddRmsNormHiF4QuantRegbaseTilingBase::GetWorkspaceSize()
 {
     fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
+    OP_CHECK_IF(
+        platformInfoPtr == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Missing tiling context object: platformInfoPtr"),
+        return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     return ge::GRAPH_SUCCESS;

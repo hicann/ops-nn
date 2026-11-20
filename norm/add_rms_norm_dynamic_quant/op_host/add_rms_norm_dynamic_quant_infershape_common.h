@@ -10,12 +10,15 @@
 #ifndef ADD_RMS_NORM_DYNAMIC_QUANT_INFERSHAPE_COMMON_H
 #define ADD_RMS_NORM_DYNAMIC_QUANT_INFERSHAPE_COMMON_H
 
+#include <string>
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_info.h"
 
 namespace ops::AddRmsNormDynamicQuantCheck {
+
+constexpr const char* inputNames[] = {"x1", "x2", "gamma", "smooth_scale1", "smooth_scale2", "beta"};
 
 inline bool IsRegbaseForInfer()
 {
@@ -52,17 +55,28 @@ inline ge::graphStatus CheckInputShapes(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, x1);
     OP_CHECK_NULL_WITH_CONTEXT(context, x2);
     OP_CHECK_NULL_WITH_CONTEXT(context, gamma);
-    OP_CHECK_IF(!CompatibleShape(*x1, *x2), OP_LOGE(context, "x1 and x2 shapes must match."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CompatibleShape(*x1, *x2),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "x1, x2",
+                    (Ops::Base::ToString(*x1) + ", " + Ops::Base::ToString(*x2)).c_str(), "shapes must match"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gamma) && gamma->GetDimNum() != 1,
                 OP_LOGE(context, "gamma must be one-dimensional."), return ge::GRAPH_FAILED);
     if (!Ops::Base::IsUnknownRank(*x1)) {
-        OP_CHECK_IF(x1->GetDimNum() == 0, OP_LOGE(context, "x1 must have a reduction dimension."),
+        OP_CHECK_IF(x1->GetDimNum() == 0,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x1",
+                                                             std::to_string(x1->GetDimNum()).c_str(),
+                                                             "x1 must have a reduction dimension"),
                     return ge::GRAPH_FAILED);
         if (!Ops::Base::IsUnknownRank(*gamma)) {
             const auto lastDim = x1->GetDim(x1->GetDimNum() - 1);
             const auto gammaDim = gamma->GetDim(0);
             OP_CHECK_IF(lastDim >= 0 && gammaDim >= 0 && lastDim != gammaDim,
-                        OP_LOGE(context, "gamma length must match the last dimension of x1."), return ge::GRAPH_FAILED);
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context->GetNodeName(), "x1, gamma",
+                            (Ops::Base::ToString(*x1) + ", " + Ops::Base::ToString(*gamma)).c_str(),
+                            "gamma length must match the last dimension of x1"),
+                        return ge::GRAPH_FAILED);
         }
     }
     // smooth_scale1, smooth_scale2 and beta share gamma's shape contract.
@@ -70,10 +84,16 @@ inline ge::graphStatus CheckInputShapes(gert::InferShapeContext* context)
         const auto* shape = context->GetOptionalInputShape(index);
         if (shape != nullptr) {
             OP_CHECK_IF(!Ops::Base::IsUnknownRank(*shape) && shape->GetDimNum() != 1,
-                        OP_LOGE(context, "Optional input %zu must be one-dimensional.", index),
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), inputNames[index],
+                                                                 std::to_string(shape->GetDimNum()).c_str(),
+                                                                 "optional input must be one-dimensional"),
                         return ge::GRAPH_FAILED);
             OP_CHECK_IF(!CompatibleShape(*gamma, *shape),
-                        OP_LOGE(context, "Optional input %zu must match gamma shape.", index), return ge::GRAPH_FAILED);
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context->GetNodeName(), (std::string("gamma, ") + inputNames[index]).c_str(),
+                            (Ops::Base::ToString(*gamma) + ", " + Ops::Base::ToString(*shape)).c_str(),
+                            "optional input shape must match gamma"),
+                        return ge::GRAPH_FAILED);
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -109,13 +129,19 @@ inline ge::graphStatus CheckInputDtypes(gert::InferDataTypeContext* context)
 {
     const auto dtype = context->GetInputDataType(0);
     OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16,
-                OP_LOGE(context, "x1 dtype must be float16 or bfloat16."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(dtype).c_str(),
+                                                      "supported dtypes are float16 and bfloat16"),
+                return ge::GRAPH_FAILED);
     for (size_t index = 1; index < 6; ++index) {
         const auto inputDtype = context->GetInputDataType(index);
         // All present tensor inputs share this dtype. DT_UNDEFINED is only
         // permitted for absent optional inputs, never for x2 or gamma.
         OP_CHECK_IF((index < 3 || inputDtype != ge::DT_UNDEFINED) && inputDtype != dtype,
-                    OP_LOGE(context, "Input %zu dtype must match x1.", index), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context->GetNodeName(), (std::string("x1, ") + inputNames[index]).c_str(),
+                        (Ops::Base::ToString(dtype) + ", " + Ops::Base::ToString(inputDtype)).c_str(),
+                        "all present input dtypes must match x1"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }

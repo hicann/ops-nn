@@ -14,6 +14,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "ut_op_util.h"
 #include "platform/platform_infos_def.h"
 #include "test_add_rms_norm_tiling.h"
@@ -2980,5 +2981,98 @@ TEST_F(AddRmsNormTiling, add_rms_norm_epsilon_non_finite_rejected)
 
         SCOPED_TRACE(::testing::Message() << "epsilon is non-finite, case " << static_cast<int>(epsilon < 0));
         EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(AddRmsNormTiling, LegacyDimensionProductOverflowReportsOnce)
+{
+    gert::StorageShape inputShapeX1 = {{65536, 65536, 1}, {65536, 65536, 1}};
+    gert::StorageShape inputShapeX2 = {{65536, 65536, 1}, {65536, 65536, 1}};
+    gert::StorageShape gammaShape = {{1}, {1}};
+    gert::StorageShape outShapeY = {{65536, 65536, 1}, {65536, 65536, 1}};
+    gert::StorageShape rstdShape = {{65536, 65536, 1}, {65536, 65536, 1}};
+    gert::StorageShape outShapeX = {{65536, 65536, 1}, {65536, 65536, 1}};
+
+    std::map<std::string, std::string> socVersionInfos = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
+    string compileInfoString = R"({
+             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                               "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+                               "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                               "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                               "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                               "CORE_NUM": 40}
+                               })";
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    optiling::AddRmsNormCompileInfo compileInfo;
+
+    std::string opType("AddRmsNorm");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+
+    ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
+
+    ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    ASSERT_NE(param, nullptr);
+    auto& manager = ErrorManager::GetInstance();
+    ASSERT_EQ(manager.Init(), 0);
+    manager.GetRawErrorMessages();
+    const float epsilon = 1e-6f;
+    {
+        auto holder = gert::TilingContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&inputShapeX1, &inputShapeX2, &gammaShape})
+                          .OutputShapes({&outShapeY, &rstdShape, &outShapeX})
+                          .CompileInfo(&compileInfo)
+                          .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)}})
+                          .TilingData(param.get())
+                          .Workspace(wsSize)
+                          .Build();
+
+        gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+        ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
+
+        EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
+        const auto errors = manager.GetRawErrorMessages();
+        ASSERT_EQ(errors.size(), 1U);
+        EXPECT_EQ(errors[0].error_id, "EZ0009");
+        EXPECT_EQ(errors[0].args_map.at("param_name"), "x1");
     }
 }

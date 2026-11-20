@@ -13,6 +13,7 @@
  * \brief Common validation and utility methods for RegBase tiling classes
  */
 
+#include "../../../norm_common/op_host/norm_error_report.h"
 #include "add_rms_norm_dynamic_quant_tiling_arch35.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
@@ -30,8 +31,8 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTilingBase::CheckDtypeVaild(ge::Dat
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(nodeName_.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-            Ops::Base::ToString(srcDtype).c_str());
+    OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.",
+                           srcName.c_str(), Ops::Base::ToString(srcDtype).c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -64,16 +65,29 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckShapeNull()
     if (hasSmoothScale1_) {
         const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
         OP_CHECK_IF(nullptr == smoothScale1Shape,
-                    OP_LOGE(nodeName_.c_str(), "smoothScale1 is null but hasSmoothScale1=true."), return false);
+                    Ops::NN::ErrorReport::TilingFailure(
+                        nodeName_.c_str(),
+                        "Internal tiling state inconsistency: smoothScale1 is null but hasSmoothScale1=true; the "
+                        "optional shape was present at flag parsing and is missing at re-query within one invocation."),
+                    return false);
     }
     if (hasSmoothScale2_) {
         const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
         OP_CHECK_IF(nullptr == smoothScale2Shape,
-                    OP_LOGE(nodeName_.c_str(), "smoothScale2 is null but hasSmoothScale2=true."), return false);
+                    Ops::NN::ErrorReport::TilingFailure(
+                        nodeName_.c_str(),
+                        "Internal tiling state inconsistency: smoothScale2 is null but hasSmoothScale2=true; the "
+                        "optional shape was present at flag parsing and is missing at re-query within one invocation."),
+                    return false);
     }
     if (hasBeta_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
-        OP_CHECK_IF(nullptr == betaShape, OP_LOGE(nodeName_.c_str(), "beta is null but hasBeta=true."), return false);
+        OP_CHECK_IF(nullptr == betaShape,
+                    Ops::NN::ErrorReport::TilingFailure(
+                        nodeName_.c_str(),
+                        "Internal tiling state inconsistency: beta is null but hasBeta=true; the optional shape was "
+                        "present at flag parsing and is missing at re-query within one invocation."),
+                    return false);
     }
     return true;
 }
@@ -145,7 +159,7 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputAttr()
     } else {
         OP_CHECK_IF(
             !hasSmoothScale1_ && hasSmoothScale2_,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_.c_str(), "smoothScale2", "available without smoothScale1",
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_.c_str(), "smooth_scale2", "available without smoothScale1",
                                                   "smoothScale2 requires smoothScale1 when outputMask is unavailable"),
             return false);
     }
@@ -191,20 +205,22 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputShapeDim()
     if (hasSmoothScale1_) {
         const gert::StorageShape* s1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
         size_t s1DimNum = s1Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(s1DimNum != 1,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale1", std::to_string(s1DimNum).c_str(), "smoothScale1 must be 1D"),
-                    return false);
-        OP_CHECK_IF(!CheckDimBiggerZero(s1Shape, 1, nodeName_, "smoothScale1"), , return false);
+        OP_CHECK_IF(
+            s1DimNum != 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "smooth_scale1",
+                                                     std::to_string(s1DimNum).c_str(), "smoothScale1 must be 1D"),
+            return false);
+        OP_CHECK_IF(!CheckDimBiggerZero(s1Shape, 1, nodeName_, "smooth_scale1"), , return false);
     }
     if (hasSmoothScale2_) {
         const gert::StorageShape* s2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
         size_t s2DimNum = s2Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(s2DimNum != 1,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale2", std::to_string(s2DimNum).c_str(), "smoothScale2 must be 1D"),
-                    return false);
-        OP_CHECK_IF(!CheckDimBiggerZero(s2Shape, 1, nodeName_, "smoothScale2"), , return false);
+        OP_CHECK_IF(
+            s2DimNum != 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_.c_str(), "smooth_scale2",
+                                                     std::to_string(s2DimNum).c_str(), "smoothScale2 must be 1D"),
+            return false);
+        OP_CHECK_IF(!CheckDimBiggerZero(s2Shape, 1, nodeName_, "smooth_scale2"), , return false);
     }
     if (hasBeta_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
@@ -228,36 +244,32 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputShapeValue()
     const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
     const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
 
-    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName_, "x1", "x2"),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    nodeName_.c_str(), "x2", Ops::Base::ToString(x2Shape->GetStorageShape()).c_str(), "same as x1"),
-                return false);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName_, "x1", "x2"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return false);
 
-    OP_CHECK_IF(!NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName_, "x1", "gamma", true),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "gamma",
-                                                      Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(),
-                                                      "should match last dim of x1"),
-                return false);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName_, "x1", "gamma", true),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return false);
 
     if (hasSmoothScale1_) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(gammaShape, smoothScale1Shape, nodeName_, "gamma", "smoothScale1"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale1",
-                        Ops::Base::ToString(smoothScale1Shape->GetStorageShape()).c_str(), "same as gamma"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(gammaShape, smoothScale1Shape, nodeName_, "gamma", "smooth_scale1"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
     }
     if (hasSmoothScale2_) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(gammaShape, smoothScale2Shape, nodeName_, "gamma", "smoothScale2"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale2",
-                        Ops::Base::ToString(smoothScale2Shape->GetStorageShape()).c_str(), "same as gamma"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(gammaShape, smoothScale2Shape, nodeName_, "gamma", "smooth_scale2"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
     }
     if (hasBeta_) {
         OP_CHECK_IF(
             !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName_, "gamma", "beta"),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                nodeName_.c_str(), "beta", Ops::Base::ToString(betaShape->GetStorageShape()).c_str(), "same as gamma"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
             return false);
     }
     // INT4 requires the last dim of x1 to be even (可被2整除)
@@ -292,10 +304,10 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
     std::string scalePrefixReasonStr = "same as x1 prefix dims";
 
     // output x must equal x1 (always output)
-    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, xShape, nodeName_, "x1", "x"),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    nodeName_.c_str(), "x", Ops::Base::ToString(xShape->GetStorageShape()).c_str(), "same as x1"),
-                return false);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeSame(x1Shape, xShape, nodeName_, "x1", "x"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return false);
 
     // product of x1 prefix dims (without last dim), used for 1D scale1/scale2 validation
     int64_t x1PrefixProduct = 1;
@@ -304,10 +316,10 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
     }
 
     if (outQuant1Flag_ == 1) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, y1Shape, nodeName_, "x1", "y1"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "y1", Ops::Base::ToString(y1Shape->GetStorageShape()).c_str(), "same as x1"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(x1Shape, y1Shape, nodeName_, "x1", "y1"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
 
         // scale1 = x1 without last dim (multi-dim prefix match, or 1D flattened prefix)
         size_t s1DimNum = scale1Shape->GetStorageShape().GetDimNum();
@@ -345,10 +357,10 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
     }
 
     if (outQuant2Flag_ == 1) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, y2Shape, nodeName_, "x1", "y2"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "y2", Ops::Base::ToString(y2Shape->GetStorageShape()).c_str(), "same as x1"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(x1Shape, y2Shape, nodeName_, "x1", "y2"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
 
         // scale2 = x1 without last dim (multi-dim prefix match, or 1D flattened prefix)
         size_t s2DimNum = scale2Shape->GetStorageShape().GetDimNum();
@@ -386,17 +398,17 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
     }
 
     if (hasY3_) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, y3Shape, nodeName_, "x1", "y3"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "y3", Ops::Base::ToString(y3Shape->GetStorageShape()).c_str(), "same as x1"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(x1Shape, y3Shape, nodeName_, "x1", "y3"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
     }
 
     if (hasY4_) {
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, y4Shape, nodeName_, "x1", "y4"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        nodeName_.c_str(), "y4", Ops::Base::ToString(y4Shape->GetStorageShape()).c_str(), "same as x1"),
-                    return false);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(x1Shape, y4Shape, nodeName_, "x1", "y4"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return false);
     }
     return true;
 }
@@ -436,7 +448,7 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputDtype()
         std::string s1ReasonStr = "same as x1 (" + Ops::Base::ToString(static_cast<ge::DataType>(x1Dtype)) + ")";
         OP_CHECK_IF(x1Dtype != smoothScale1Dtype,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale1",
+                        nodeName_.c_str(), "smooth_scale1",
                         Ops::Base::ToString(static_cast<ge::DataType>(smoothScale1Dtype)).c_str(), s1ReasonStr.c_str()),
                     return false);
     }
@@ -445,7 +457,7 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckInputDtype()
         std::string s2ReasonStr = "same as x1 (" + Ops::Base::ToString(static_cast<ge::DataType>(x1Dtype)) + ")";
         OP_CHECK_IF(x1Dtype != smoothScale2Dtype,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                        nodeName_.c_str(), "smoothScale2",
+                        nodeName_.c_str(), "smooth_scale2",
                         Ops::Base::ToString(static_cast<ge::DataType>(smoothScale2Dtype)).c_str(), s2ReasonStr.c_str()),
                     return false);
     }
@@ -548,20 +560,23 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(nodeName_.c_str(), "Enter GetShapeAttrsInfo.");
     OP_CHECK_IF(!ParseOutputFlags(), OP_LOGE(nodeName_.c_str(), "Parse output flags failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName_.c_str(), "The not optional input is null."),
+    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The not optional input is null."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputAttr(), OP_LOGE(nodeName_.c_str(), "The input attr is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName_.c_str(), "The input shape dim is invalid."),
+    OP_CHECK_IF(!CheckInputAttr(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The input attr is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName_.c_str(), "The input shape relationship is invalid."),
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The input shape dim is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName_.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputShapeValue(), OP_LOGE(nodeName_.c_str(), "The output shape is invalid."),
+    OP_CHECK_IF(!CheckInputShapeValue(),
+                OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The input shape relationship is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName_.c_str(), "The output dtype is invalid."),
+    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The input dtype is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName_.c_str(), "Set input shape failed."),
+    OP_CHECK_IF(!CheckOutputShapeValue(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The output shape is invalid."),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "The output dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(),
+                OP_LOGE_WITHOUT_REPORT(nodeName_.c_str(), "Set input shape failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

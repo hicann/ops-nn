@@ -12,6 +12,7 @@
  * \file add_layer_norm_quant_tiling_arch35.cpp
  * \brief
  */
+#include "../../norm_common/op_host/norm_error_report.h"
 #include "add_layer_norm_quant_tiling.h"
 
 namespace optiling {
@@ -185,9 +186,11 @@ bool AddLayerNormQuantRegbaseTiling::DoTiling()
 {
     OP_CHECK_IF((nullptr == context_),
                 OP_LOGE("AddLayerNormQuantRegbaseTiling", "Helper context_ get nullptr, return failed."), return false);
-    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo failed, return false"), return false);
+    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "GetBaseInfo failed, return false"),
+                return false);
     OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo failed, return false"), return false);
-    OP_CHECK_IF(!CheckDtype(), OP_LOGE(context_->GetNodeName(), "CheckDtype failed, return false"), return false);
+    OP_CHECK_IF(!CheckDtype(), OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "CheckDtype failed, return false"),
+                return false);
     OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling failed, return false"), return false);
     OP_CHECK_IF(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling failed, return false"), return false);
     OP_LOGW(context_->GetNodeName(), "Finish DoTiling");
@@ -241,10 +244,14 @@ bool AddLayerNormQuantRegbaseTiling::GetPlatformInfo()
 bool AddLayerNormQuantRegbaseTiling::GetAttrs()
 {
     auto attrs = context_->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr, OP_LOGE(context_->GetNodeName(), "Get attrs nullptr, return false."), return false);
+    OP_CHECK_IF(attrs == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "Get attrs nullptr, return false."),
+                return false);
 
     const char* qms = attrs->GetAttrPointer<char>(QUANT_MODE_IDX);
-    OP_CHECK_IF(nullptr == qms, OP_LOGE(context_->GetNodeName(), "Get required attr quantMode failed, tiling failed"),
+    OP_CHECK_IF(nullptr == qms,
+                Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(),
+                                                    "Get required attr quantMode failed, tiling failed"),
                 return false);
     std::string quantModeStr = qms;
     this->isDynamicQuant_ = (quantModeStr == "dynamic");
@@ -271,7 +278,8 @@ bool AddLayerNormQuantRegbaseTiling::GetBaseInfo()
 {
     OP_CHECK_IF(!GetPlatformInfo(), OP_LOGE(context_->GetNodeName(), "GetPlatformInfo failed, return false"),
                 return false);
-    OP_CHECK_IF(!GetAttrs(), OP_LOGE(context_->GetNodeName(), "GetAttrs failed, return false"), return false);
+    OP_CHECK_IF(!GetAttrs(), OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "GetAttrs failed, return false"),
+                return false);
     return true;
 }
 
@@ -752,7 +760,10 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalInputDtype(ge::DataType x1Dtyp
             return true;
         }
         auto desc = context_->GetOptionalInputDesc(idx);
-        OP_CHECK_IF(desc == nullptr, OP_LOGE(context_->GetNodeName(), "%s desc is nullptr", name), return false);
+        OP_CHECK_IF(
+            desc == nullptr,
+            Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), std::string(name) + " desc is nullptr"),
+            return false);
         auto dt = desc->GetDataType();
         // 四个可选输入各自 dtype 要么和 x1 一致，要么是 fp32
         if (dt != x1Dtype && dt != ge::DT_FLOAT) {
@@ -799,7 +810,8 @@ bool AddLayerNormQuantRegbaseTiling::CheckDtype()
 
     // 校验 x1 支持的 dtype
     if (x1Dtype != ge::DT_FLOAT16 && x1Dtype != ge::DT_BF16 && x1Dtype != ge::DT_FLOAT) {
-        OP_LOGE(context_->GetNodeName(), "Unsupported x1 dtype: %s", Ops::Base::ToString(x1Dtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(x1Dtype).c_str(),
+                                              "Supported dtypes are float16, bfloat16 and float32");
         return false;
     }
 
@@ -817,7 +829,8 @@ bool AddLayerNormQuantRegbaseTiling::CheckDtype()
     // 校验 bias（如果存在，必须和 x1 相同）
     if (this->biasType_ != BIAS_TYPE::NO_BIAS) {
         auto biasDesc = context_->GetOptionalInputDesc(BIAS_IDX);
-        OP_CHECK_IF(biasDesc == nullptr, OP_LOGE(context_->GetNodeName(), "bias desc is nullptr"), return false);
+        OP_CHECK_IF(biasDesc == nullptr,
+                    Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(), "bias desc is nullptr"), return false);
         ge::DataType biasDtype = biasDesc->GetDataType();
         if (biasDtype != x1Dtype) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

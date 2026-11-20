@@ -12,6 +12,7 @@
  * \file add_rms_norm_dynamic_mx_quant_infershape.cpp
  * \brief
  */
+#include <string>
 #include <algorithm>
 #include "log/log.h"
 #include "util/shape_util.h"
@@ -46,12 +47,15 @@ static ge::graphStatus InferShape4AddRmsNormDynamicMxQuant(gert::InferShapeConte
     OP_LOGI(context, "Begin to do InferShape4AddRmsNormDynamicMxQuant");
 
     const gert::Shape* x1Shape = context->GetInputShape(X1_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
-    OP_CHECK_IF(!IsUnknownRank(*x1Shape) && (x1Shape->GetDimNum() < 1 || x1Shape->GetDimNum() > INPUT_MAX_DIM_NUM),
-                OP_LOGE(context->GetNodeName(), "Input x1 rank[%lu] should be in [1, 7].", x1Shape->GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x1"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !IsUnknownRank(*x1Shape) && (x1Shape->GetDimNum() < 1 || x1Shape->GetDimNum() > INPUT_MAX_DIM_NUM),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "x1", std::to_string(x1Shape->GetDimNum()).c_str(), "rank must be in [1, 7]"),
+        return ge::GRAPH_FAILED);
     const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    OP_CHECK_IF(gammaShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "gamma"),
+                return ge::GRAPH_FAILED);
 
     // Output shapes
     gert::Shape* yShape = context->GetOutputShape(Y_IDX);
@@ -137,8 +141,8 @@ static graphStatus InferDataType4AddRmsNormDynamicMxQuant(gert::InferDataTypeCon
             yDtype = static_cast<ge::DataType>(*pDstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(
-                    context,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "dst_type", std::to_string(static_cast<int>(yDtype)).c_str(),
                     "attr dst_type only support 35(float8_e5m2), 36(float8_e4m3fn), 40(float4_e2m1), 41(float4_e1m2)"),
                 return ge::GRAPH_FAILED);
         }

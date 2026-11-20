@@ -16,6 +16,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "ut_op_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../../op_host/rms_norm_tiling.h"
@@ -1609,6 +1610,22 @@ const std::array<std::pair<ge::DataType, ge::DataType>, 5> DTYPES = {{{ge::DT_FL
                                                                       {ge::DT_FLOAT, ge::DT_FLOAT},
                                                                       {ge::DT_FLOAT16, ge::DT_FLOAT},
                                                                       {ge::DT_BF16, ge::DT_FLOAT}}};
+
+TEST(RmsNormTemplatesTiling, LegacyMixedDtypeUbFailureReportsOnce)
+{
+    auto& manager = ErrorManager::GetInstance();
+    ASSERT_EQ(manager.Init(), 0);
+    manager.GetRawErrorMessages();
+    const auto result = RunShapeTiling({{2, 4096}, {2, 4096}}, {{4096}, {4096}}, {{2, 1}, {2, 1}}, ge::DT_FLOAT16,
+                                       ge::DT_FLOAT, 0, "RmsNorm", 64, 2048, "Ascend910B", "2201");
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+    const auto errors = manager.GetRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    EXPECT_EQ(errors[0].error_id, "EZ1009");
+    EXPECT_EQ(errors[0].args_map.at("opName"), "RmsNorm");
+    EXPECT_NE(errors[0].args_map.at("reason").find("Available UB=1024"), std::string::npos);
+    EXPECT_NE(errors[0].args_map.at("reason").find("fixed buffer requirement=2560"), std::string::npos);
+}
 
 TEST(RmsNormTemplatesTiling, TransposeAdmissionAndBufferBudget)
 {

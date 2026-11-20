@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "../../../norm_common/op_host/norm_error_report.h"
 #include "add_rms_norm_dynamic_quant_tiling_arch35.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
@@ -511,7 +512,10 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
     OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGI(context->GetNodeName(), "Enter Tiling4AddRmsNormDynamicQuant (A5)");
     auto colShape = context->GetInputShape(GAMMA_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, colShape);
+    if (colShape == nullptr) {
+        Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(), "Get gamma input shape nullptr, tiling failed");
+        return ge::GRAPH_FAILED;
+    }
     auto colStorageShape = colShape->GetStorageShape();
     uint32_t col_val = colStorageShape.GetDim(0);
     bool isEmptyTensor = (col_val == 0);

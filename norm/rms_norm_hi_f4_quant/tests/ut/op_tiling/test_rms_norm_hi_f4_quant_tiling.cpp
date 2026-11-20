@@ -13,6 +13,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
+#include "base/err_mgr.h"
 #include "ut_op_util.h"
 #include "platform/platform_infos_def.h"
 #include "test_rms_norm_hi_f4_quant_tiling.h"
@@ -37,7 +38,8 @@ static void RunTilingFullTest(gert::StorageShape& xShape, gert::StorageShape& ga
                               gert::StorageShape& outYShape, gert::StorageShape& outScaleShape,
                               gert::StorageShape& outRstdShape, float epsilon, bool outputRstd, ge::DataType xDtype,
                               ge::DataType gammaDtype, ge::DataType yDtype, ge::DataType scaleDtype,
-                              ge::DataType rstdDtype, ge::graphStatus expectedTilingResult, uint64_t expectedTilingKey)
+                              ge::DataType rstdDtype, ge::graphStatus expectedTilingResult, uint64_t expectedTilingKey,
+                              const char* expectedCode = nullptr, const char* expectedParameter = nullptr)
 {
     std::map<std::string, std::string> soc_version_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", )"
@@ -111,7 +113,44 @@ static void RunTilingFullTest(gert::StorageShape& xShape, gert::StorageShape& ga
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
+    const auto savedErrorContext = error_message::GetErrMgrContext();
+    auto isolatedErrorContext = savedErrorContext;
+    isolatedErrorContext.work_stream_id = reinterpret_cast<std::uintptr_t>(tiling_context);
+    error_message::SetErrMgrContext(isolatedErrorContext);
+    (void)error_message::GetErrMgrRawErrorMessages();
     EXPECT_EQ(tiling_func(tiling_context), expectedTilingResult);
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    error_message::SetErrMgrContext(savedErrorContext);
+    if (expectedCode != nullptr) {
+        ASSERT_EQ(errors.size(), 1U) << "One failure must produce exactly one formal report";
+        const auto& error = errors.front();
+        ASSERT_NE(error.error_id, nullptr);
+        EXPECT_STREQ(error.error_id.get(), expectedCode);
+        EXPECT_EQ(error.args_key.size(), error.args_value.size());
+        bool foundParameter = false;
+        bool foundActual = false;
+        bool foundReason = false;
+        for (size_t i = 0; i < error.args_key.size(); ++i) {
+            ASSERT_NE(error.args_key[i], nullptr);
+            ASSERT_NE(error.args_value[i], nullptr);
+            const std::string key = error.args_key[i].get();
+            const std::string value = error.args_value[i].get();
+            if (key == "param_name" || key == "param_names") {
+                foundParameter = expectedParameter != nullptr && value.find(expectedParameter) != std::string::npos;
+            }
+            if (key.find("incorrect_") == 0) {
+                foundActual = !value.empty();
+            }
+            if (key == "reason") {
+                foundReason = !value.empty();
+            }
+        }
+        EXPECT_TRUE(foundParameter);
+        EXPECT_TRUE(foundActual);
+        EXPECT_TRUE(foundReason);
+    } else if (expectedTilingResult == ge::GRAPH_SUCCESS) {
+        EXPECT_TRUE(errors.empty()) << "Successful tiling must not leave a formal error";
+    }
     if (expectedTilingResult == ge::GRAPH_SUCCESS && expectedTilingKey != 0) {
         auto tiling_key = tiling_context->GetTilingKey();
         EXPECT_EQ(tiling_key, expectedTilingKey);
@@ -215,7 +254,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, x_gamma_shape_not_match_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0010", "gamma");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, gamma_shape_not_1_dim_fail)
@@ -229,7 +268,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, gamma_shape_not_1_dim_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0012", "gamma");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, gamma_shape_invalid_fail)
@@ -243,7 +282,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, gamma_shape_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0010", "gamma");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, x_dtype_invalid_fail)
@@ -257,7 +296,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, x_dtype_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0020", "x");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, gamma_dtype_invalid_fail)
@@ -271,7 +310,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, gamma_dtype_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_INT32, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0020", "gamma");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, y_dtype_invalid_fail)
@@ -285,7 +324,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, y_dtype_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0020", "y");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, scale_dtype_invalid_fail)
@@ -299,7 +338,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, scale_dtype_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_FLOAT,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0020", "scale");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, rstd_dtype_invalid_fail)
@@ -313,7 +352,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, rstd_dtype_invalid_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT16, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT16, ge::GRAPH_FAILED, 0, "EZ0020", "rstd");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, numCol_not_multiple_of_64_fail)
@@ -327,7 +366,7 @@ TEST_F(RmsNormHiF4QuantTilingTest, numCol_not_multiple_of_64_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0009", "x");
 }
 
 TEST_F(RmsNormHiF4QuantTilingTest, numCol_48_not_multiple_of_64_fail)
@@ -341,5 +380,5 @@ TEST_F(RmsNormHiF4QuantTilingTest, numCol_48_not_multiple_of_64_fail)
 
     RunTilingFullTest(x_shape, gamma_shape, nullptr, out_y_shape, out_scale_shape, out_rstd_shape, 1e-6f, true,
                       Ops::NN::DT_FLOAT16, Ops::NN::DT_FLOAT16, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE,
-                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0);
+                      Ops::NN::DT_FLOAT, ge::GRAPH_FAILED, 0, "EZ0009", "x");
 }

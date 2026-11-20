@@ -240,7 +240,8 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
 static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
 {
     OP_LOGD("Tiling4AddRmsNormCast", "Enter Tiling4AddRmsNormCast");
-    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid."),
+                return ge::GRAPH_FAILED);
     AddRMSNormCastTilingData tiling;
     auto ptrCompileInfo = reinterpret_cast<const AddRmsNormCastCompileInfo*>(context->GetCompileInfo());
     uint32_t numCore;
@@ -287,9 +288,11 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
     for (size_t i = 0; i < x1DimNum - gammaDimNum; i++) {
         numRowTmp *= static_cast<uint64_t>(x1_shape.GetDim(i));
     }
-    OP_CHECK_IF(numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
-                OP_LOGE(context, "Invalid shape: numRow %lu or numCol %lu exceeds uint32 max.", numRowTmp, numColTmp),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        numRowTmp > std::numeric_limits<uint32_t>::max() || numColTmp > std::numeric_limits<uint32_t>::max(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(x1_shape).c_str(),
+                                              "The outer and reduction dimension products must fit in uint32_t"),
+        return ge::GRAPH_FAILED);
     uint32_t numCol = static_cast<uint32_t>(numColTmp);
     uint32_t numRow = static_cast<uint32_t>(numRowTmp);
     float avgFactor = (numCol == 0U) ? 0 : 1.0 / numCol;

@@ -13,6 +13,7 @@
  * \brief
  */
 #include "add_rms_norm_dynamic_mx_quant_tiling.h"
+#include "../../norm_common/op_host/norm_error_report.h"
 
 namespace optiling {
 
@@ -23,7 +24,10 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
         useRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     } else {
         auto compileInfo = static_cast<const AddRmsNormDynamicMxQuantCompileInfo*>(context->GetCompileInfo());
-        OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+        OP_CHECK_IF(compileInfo == nullptr,
+                    Ops::NN::ErrorReport::TilingFailure(context->GetNodeName(),
+                                                        "Missing platform metadata and cached compile information"),
+                    return ge::GRAPH_FAILED);
         useRegbase = compileInfo->isRegbase;
     }
     return ge::GRAPH_SUCCESS;
@@ -32,8 +36,8 @@ static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegb
 static ge::graphStatus Tiling4AddRmsNormDynamicMxQuant(gert::TilingContext* context)
 {
     bool useRegbase = false;
-    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Check SocInfo Failed"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context, "Check SocInfo Failed"), return ge::GRAPH_FAILED);
     if (useRegbase) {
         return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }

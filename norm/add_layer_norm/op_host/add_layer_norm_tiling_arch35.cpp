@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "../../norm_common/op_host/norm_error_report.h"
 #include "add_layer_norm_tiling.h"
 
 namespace optiling {
@@ -87,7 +88,8 @@ const gert::Shape& AddLayerNormRegbaseTiling::EnsureNotScalar(const gert::Shape&
 ge::graphStatus AddLayerNormRegbaseTiling::CheckDimNum(gert::Shape& shape) const
 {
     OP_CHECK_IF(shape.GetDimNum() > SHAPE_MAX_DIM_NUM,
-                OP_LOGE(context_->GetNodeName(), "Dim num should be no greater than 8."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Dim num should be no greater than 8."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -96,8 +98,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckShapeAllPositive(gert::Shape& sh
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(shape.GetDim(i) <= 0,
-                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i,
-                            shape.GetDim(i)),
+                    OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(),
+                                           "Dim %lu of input should be positive, but actual %ld.", i, shape.GetDim(i)),
                     return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -106,14 +108,14 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckShapeAllPositive(gert::Shape& sh
 ge::graphStatus AddLayerNormRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
 {
     OP_CHECK_IF(shape0.GetDimNum() != shape1.GetDimNum(),
-                OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
-                        shape1.GetDimNum()),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu",
+                                       shape0.GetDimNum(), shape1.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < shape0.GetDimNum(); i++) {
         OP_CHECK_IF(shape0.GetDim(i) != shape1.GetDim(i),
-                    OP_LOGE(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
-                            shape1.GetDim(i)),
+                    OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i,
+                                           shape0.GetDim(i), shape1.GetDim(i)),
                     return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -256,7 +258,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
         return ge::GRAPH_FAILED;
     }
     if (CalcRowsAndCols(storageShape0, storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Check shapes of gamma and beta failed.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Check shapes of gamma and beta failed.");
         return ge::GRAPH_FAILED;
     }
     // 空张量(reduce empty)放行：仅当归一化维 R==0 且外维 A>0。
@@ -293,7 +295,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     } else {
         auto biasShape = EnsureNotScalar(biasShapeP->GetStorageShape());
         if (BiasShapeProcess(storageShape0, storageShape2, biasShape) != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context_->GetNodeName(), "bias shape is invalid.");
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "bias shape is invalid.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -365,11 +367,11 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsShape()
         return ge::GRAPH_FAILED;
     }
     if (MeanRstdShapeProcess(x1Shape, gammaShape, meanShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Shapes of mean check failed.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shapes of mean check failed.");
         return ge::GRAPH_FAILED;
     }
     if (MeanRstdShapeProcess(x1Shape, gammaShape, rstdShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Shapes of rstd check failed.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shapes of rstd check failed.");
         return ge::GRAPH_FAILED;
     }
     // check output3
@@ -640,22 +642,22 @@ ge::graphStatus AddLayerNormRegbaseTiling::GetShapeAttrsInfo()
 
     // check inputs shape
     if (CheckInputsShape() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Inputs shape invalid.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Inputs shape invalid.");
         return ge::GRAPH_FAILED;
     }
     // check inputs dtype
     if (CheckInputsDtype() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Inputs dtype invalid.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Inputs dtype invalid.");
         return ge::GRAPH_FAILED;
     }
     // check outputs shape
     if (CheckOutputsShape() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Outputs shape invalid.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Outputs shape invalid.");
         return ge::GRAPH_FAILED;
     }
     // check outputs dtype
     if (CheckOutputsDtype() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Outputs dtype invalid.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Outputs dtype invalid.");
         return ge::GRAPH_FAILED;
     }
 
@@ -775,7 +777,10 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
             colsPerLoop_ = colsPerLoop_ * dataTypeSize / blockSize_ * blockSize_ / dataTypeSize;
             colsPerLoop_ = colsPerLoop_ / (blockSize_ / TWO) * (blockSize_ / TWO);
         } else {
-            OP_LOGE(context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%ld) is zero", dataTypeSize, blockSize_);
+            Ops::NN::ErrorReport::TilingFailure(
+                context_->GetNodeName(),
+                "Invalid platform/type metadata: dataTypeSize=" + std::to_string(dataTypeSize) + ", blockSize=" +
+                    std::to_string(blockSize_) + "; both must be positive. Check platform resource configuration.");
             return ge::GRAPH_FAILED;
         }
         rowsPerLoop_ = 1;

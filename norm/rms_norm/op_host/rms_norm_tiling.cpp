@@ -12,6 +12,7 @@
  * \file rms_norm_tiling.cpp
  * \brief RmsNorm tiling file
  */
+#include "../../norm_common/op_host/norm_error_report.h"
 #include <iostream>
 #include <limits>
 #include "op_host/tiling_util.h"
@@ -194,13 +195,18 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
         // 同时保留省略归约后缀中各个 1 的输出表示。
         const size_t outerDimNum = xDimNum - gammaDimNum;
         OP_TILING_CHECK(rstdDimNum != xDimNum && rstdDimNum != outerDimNum,
-                        OP_LOGE(context, "Empty-input rstd rank must equal x rank or the non-reduced rank."),
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                            context->GetNodeName(), "rstd", std::to_string(rstdDimNum).c_str(),
+                            "For empty input, rstd rank must equal x rank or the non-reduced rank"),
                         return false);
         for (size_t i = 0; i < rstdDimNum; ++i) {
             const int64_t expectedDim = i < outerDimNum ? xShape->GetStorageShape().GetDim(i) : 1;
-            OP_TILING_CHECK(rstdShape->GetStorageShape().GetDim(i) != expectedDim,
-                            OP_LOGE(context, "Empty-input rstd shape must match the non-reduced dimensions."),
-                            return false);
+            OP_TILING_CHECK(
+                rstdShape->GetStorageShape().GetDim(i) != expectedDim,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape->GetStorageShape()).c_str(),
+                    "For empty input, rstd must match the non-reduced dimensions with optional trailing ones"),
+                return false);
         }
         return true;
     }
@@ -283,7 +289,10 @@ bool CalMixDtypeTiling(uint32_t& modeKey, uint64_t& rowFactor, uint64_t& ubFacto
     if (ubSize > notColBufSizeSum) {
         tmpCol = (ubSize - notColBufSizeSum) / oneColSize; // oneColSize not be zero, div without check.
     } else {
-        OP_LOGE("[RmsNorm]", "Cal tiling failed, col less than 0.");
+        Ops::NN::ErrorReport::UnsupportedCapability(
+            "RmsNorm", "Available UB=" + std::to_string(ubSize) +
+                           " does not exceed fixed buffer requirement=" + std::to_string(notColBufSizeSum) +
+                           "; reduce the working set or select a supported platform/implementation.");
         return false;
     }
     tmpCol = (tmpCol / BLOCK_ALIGN_NUM) * BLOCK_ALIGN_NUM;
@@ -339,7 +348,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             "The shape dim of output rstd must be less than or equal to that of input x");
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid."),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(!CheckRstdShape4RmsNorm(context), OP_LOGE(context, "Output rstd shape invalid."),
                     return ge::GRAPH_FAILED);
@@ -379,17 +388,23 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
                     return ge::GRAPH_FAILED);
     const int64_t gammaSize = gamma_shape.GetShapeSize();
     OP_TILING_CHECK(isRegbase && (gammaSize < 0 || x_shape.GetShapeSize() < 0),
-                    OP_LOGE(context, "Input shape size exceeds the int64_t range."), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "x and gamma",
+                        (Ops::Base::ToString(x_shape) + " and " + Ops::Base::ToString(gamma_shape)).c_str(),
+                        "Shape element counts must be nonnegative and must not exceed INT64_MAX"),
+                    return ge::GRAPH_FAILED);
     uint64_t numCol = static_cast<uint64_t>(gammaSize);
     float avgFactor = (numCol == 0ULL) ? 0.0f : 1.0f / static_cast<float>(numCol);
     size_t xDimNum = x_shape.GetDimNum();
     size_t gammaDimNum = gamma_shape.GetDimNum();
     uint64_t numRow = 1;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
-        OP_TILING_CHECK(isRegbase && x_shape.GetDim(i) != 0 &&
-                            numRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / x_shape.GetDim(i),
-                        OP_LOGE(context, "Outer dimension product exceeds the int64_t range."),
-                        return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(
+            isRegbase && x_shape.GetDim(i) != 0 &&
+                numRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / x_shape.GetDim(i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(x_shape).c_str(),
+                                                  "The product of non-reduced dimensions must not exceed INT64_MAX"),
+            return ge::GRAPH_FAILED);
         numRow *= x_shape.GetDim(i);
     }
 
@@ -511,7 +526,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         rmsNormTilingInfo.numRow = numRow;
         rmsNormTilingInfo.isSoc910B = isSoc910B;
         bool res = CalMixDtypeTiling(modeKey, rowFactor, ubFactor, rmsNormTilingInfo);
-        OP_TILING_CHECK(!res, OP_LOGE(context, "CalMixDtypeTiling run failed."), return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(!res, OP_LOGE_WITHOUT_REPORT(context, "CalMixDtypeTiling run failed."),
+                        return ge::GRAPH_FAILED);
     } else {
         bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) &&
                       gammaDimNum == PERFORMANC_DIM_ONE);
@@ -787,10 +803,10 @@ static ge::graphStatus CheckGemmaRstdShape(const gert::TilingContext* context)
 static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
 {
     platform_ascendc::SocVersion curSocVersion;
-    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE_WITHOUT_REPORT(context, "Input shape invalid."),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(CheckGemmaRstdShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Gemma rstd shape invalid."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckGemmaRstdShape(context) != ge::GRAPH_SUCCESS,
+                    OP_LOGE_WITHOUT_REPORT(context, "Gemma rstd shape invalid."), return ge::GRAPH_FAILED);
     OP_LOGD(context, " Tiling4GemmaRmsNorm");
     OP_TILING_CHECK(!setEpsTiling(context), OP_LOGE(context, "Get attr epsilon error."), return ge::GRAPH_FAILED);
 

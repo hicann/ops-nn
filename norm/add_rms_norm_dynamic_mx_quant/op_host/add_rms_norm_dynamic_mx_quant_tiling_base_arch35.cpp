@@ -12,6 +12,7 @@
  * \file add_rms_norm_dynamic_mx_quant_tiling_base_arch35.cpp
  * \brief
  */
+#include "../../norm_common/op_host/norm_error_report.h"
 #include "add_rms_norm_dynamic_mx_quant_tiling.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
@@ -75,14 +76,19 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckX3Input()
 
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
-    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, x3Shape, nodeName, "x1", "x3"),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x3",
-                                                      Ops::Base::ToString(x3Shape->GetStorageShape()).c_str(),
-                                                      "same as x1 when x3 is present"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeSame(x1Shape, x3Shape, nodeName, "x1", "x3"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return ge::GRAPH_FAILED);
 
     const gert::Tensor* x3Tensor = context_->GetOptionalInputTensor(X3_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, x3Tensor);
+    OP_CHECK_IF(
+        x3Tensor == nullptr,
+        Ops::NN::ErrorReport::TilingFailure(
+            context_->GetNodeName(),
+            "Optional input x3 shape is present (hasX3=1) but its tiling-phase tensor object is missing; internal "
+            "context tensor materialization gap, not an empty user tensor."),
+        return ge::GRAPH_FAILED);
     ge::DataType x3Dtype = x3Tensor->GetDataType();
     OP_CHECK_IF(x3Dtype != xDtype_,
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
@@ -109,11 +115,11 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeDim()
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         !CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", "", "all dims should be greater than 0"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         !CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2", "", "all dims should be greater than 0"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -130,8 +136,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeValue(
 
     OP_CHECK_IF(
         !NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2"),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2",
-                                              Ops::Base::ToString(x2Shape->GetStorageShape()).c_str(), "same as x1"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(),
@@ -139,20 +144,24 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputShapeValue(
                                              std::to_string(gammaShape->GetStorageShape().GetDimNum()).c_str(), "1D"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(!NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
-                                                      Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(),
-                                                      "should match last dim of x1"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return ge::GRAPH_FAILED);
 
     if (betaFlag_) {
         const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, betaShape);
-        OP_CHECK_IF(!NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta"),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "beta",
-                                                          Ops::Base::ToString(betaShape->GetStorageShape()).c_str(),
-                                                          "same as gamma"),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            betaShape == nullptr,
+            Ops::NN::ErrorReport::TilingFailure(
+                context_->GetNodeName(),
+                "Internal tiling state inconsistency: betaFlag=1 from the earlier optional beta shape probe, but "
+                "the optional beta shape is missing at re-query within the same tiling invocation."),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta"),
+            OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+            return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -163,8 +172,18 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckInputDtype()
     std::set<ge::DataType> supportedXDtypes = {ge::DT_FLOAT16, ge::DT_BF16};
     std::set<ge::DataType> supportedGammaDtypes = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X1_INDEX));
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(X2_INDEX));
+    OP_CHECK_IF(context_->GetInputTensor(X1_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(),
+                    "Required input x1 passed shape validation but its tiling-phase tensor object is missing; "
+                    "internal context tensor materialization gap, not an empty user tensor."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->GetInputTensor(X2_INDEX) == nullptr,
+                Ops::NN::ErrorReport::TilingFailure(
+                    context_->GetNodeName(),
+                    "Required input x2 passed shape validation but its tiling-phase tensor object is missing; "
+                    "internal context tensor materialization gap, not an empty user tensor."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputTensor(GAMMA_INDEX));
     ge::DataType x1Dtype = context_->GetInputTensor(X1_INDEX)->GetDataType();
     ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX)->GetDataType();
@@ -326,7 +345,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckOutputShapeValue
 {
     OP_LOGD(context_->GetNodeName(), "Enter CheckOutputShapeValue.");
     OP_CHECK_IF(CheckMxScaleRstdShape() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "MxScale or Rstd shape invalid."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "MxScale or Rstd shape invalid."),
+                return ge::GRAPH_FAILED);
     const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
     const gert::StorageShape* outputXShape = context_->GetOutputShape(X_INDEX);
     const gert::StorageShape* outputYShape = context_->GetOutputShape(Y_INDEX);
@@ -335,18 +355,16 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckOutputShapeValue
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYShape);
 
     // outputX and inputX1 shapes must be equal
-    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, outputXShape, nodeName, "inputX1", "outputX"),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "output_x",
-                                                      Ops::Base::ToString(outputXShape->GetStorageShape()).c_str(),
-                                                      "same as input x1"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeSame(x1Shape, outputXShape, nodeName, "x1", "x"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return ge::GRAPH_FAILED);
 
     // outputY and inputX1 shapes must be equal
-    OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, outputYShape, nodeName, "inputX1", "outputY"),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "output_y",
-                                                      Ops::Base::ToString(outputYShape->GetStorageShape()).c_str(),
-                                                      "same as input x1"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !NormCheck::CheckShapeSame(x1Shape, outputYShape, nodeName, "x1", "y"),
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Shape validation failed; propagate the reported error"),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -483,34 +501,43 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter GetShapeAttrsInfo.");
     if (vecLengthFP32_ == 0) {
+        OP_CHECK_IF(context_->GetPlatformInfo() == nullptr,
+                    Ops::NN::ErrorReport::TilingFailure(context_->GetNodeName(),
+                                                        "Missing platform metadata for vector resources"),
+                    return ge::GRAPH_FAILED);
         uint64_t vecLength = Ops::Base::GetVRegSize(context_);
         OP_CHECK_IF((vecLength <= 0),
-                    OP_LOGE(context_, "Get vector Length failed, vector Length: %u", static_cast<uint32_t>(vecLength)),
+                    Ops::NN::ErrorReport::TilingFailure(
+                        context_->GetNodeName(), "Invalid platform vector length=" + std::to_string(vecLength) +
+                                                     "; expected a positive byte size. Check platform metadata."),
                     return ge::GRAPH_FAILED);
         vecLengthFP32_ = vecLength / FP32_SIZE;
     }
     if (ubBlockSize_ == 0) {
         ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
         OP_CHECK_IF((ubBlockSize_ <= 0),
-                    OP_LOGE(context_, "Get block Size failed, block size: %u", static_cast<uint32_t>(ubBlockSize_)),
+                    Ops::NN::ErrorReport::TilingFailure(
+                        context_->GetNodeName(), "Invalid platform UB block size=" + std::to_string(ubBlockSize_) +
+                                                     "; expected a positive byte size. Check platform metadata."),
                     return ge::GRAPH_FAILED);
     }
 
     OP_CHECK_IF(CheckShapeNull() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Required input is null."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckOptionalInput() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "Optional input check failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputShapeDim() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Input shape dim invalid."),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Optional input check failed."),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShapeDim() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input shape dim invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckInputShapeValue() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "Input shape value invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Input dtype invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckX3Input() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "x3 input check failed."),
-                return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input shape value invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Input dtype invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckX3Input() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "x3 input check failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckOutputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Output dtype invalid."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckOutputDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "Output dtype invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckMxQuantParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "MX quant params invalid."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(SetInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "SetInputParams failed."),

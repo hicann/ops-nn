@@ -66,8 +66,15 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::CheckDtypeVaild(ge::DataType& srcD
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-            Ops::Base::ToString(srcDtype).c_str());
+    std::string supportedTypes;
+    for (const auto dtype : supportDtypeList) {
+        if (!supportedTypes.empty()) {
+            supportedTypes += ", ";
+        }
+        supportedTypes += Ops::Base::ToString(dtype);
+    }
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName.c_str(), srcName.c_str(), Ops::Base::ToString(srcDtype).c_str(),
+                                          ("Supported dtypes are: " + supportedTypes).c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -268,9 +275,11 @@ bool AddRmsNormQuantRegbaseTiling::CheckOutputDtype()
                                                   ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
     auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
-    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormQuant")) ||
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormQuant")) ||
-        (y1DataType != y2DataType)) {
+    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "y1")) ||
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "y2"))) {
+        return false;
+    }
+    if (y1DataType != y2DataType) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             nodeName.c_str(), "y1 and y2",
             (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
@@ -517,12 +526,14 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::GetShapeAttrsInfo()
     OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."),
                 return ge::GRAPH_FAILED);
     CheckOptionalInput();
-    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."),
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input shape dim is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
+    OP_CHECK_IF(!CheckInputShapeValue(),
+                OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input shape relationship is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."),
+    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE_WITHOUT_REPORT(nodeName.c_str(), "The output dtype is invalid."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
                 return ge::GRAPH_FAILED);

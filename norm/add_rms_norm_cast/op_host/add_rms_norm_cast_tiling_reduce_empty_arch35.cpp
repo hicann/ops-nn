@@ -49,10 +49,9 @@ bool AddRmsNormCastReduceEmptyTiling::CheckInputShapeValue()
             numM *= static_cast<uint64_t>(x1Shape->GetStorageShape().GetDim(i));
         }
         OP_CHECK_IF(static_cast<uint64_t>(rstdShape->GetStorageShape().GetShapeSize()) != numM,
-                    OP_LOGE(nodeName.c_str(),
-                            "Shape size check invalid, rstd shape size is %lu, should be equal to the row num of x1 "
-                            "%lu when the norm dims of x1 are 0.",
-                            static_cast<uint64_t>(rstdShape->GetStorageShape().GetShapeSize()), numM),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(nodeName.c_str(), "rstd",
+                                                  std::to_string(rstdShape->GetStorageShape().GetShapeSize()).c_str(),
+                                                  std::to_string(numM).c_str()),
                     return false);
     }
 
